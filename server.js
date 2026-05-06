@@ -1,3 +1,7 @@
+// --- DNS FIX FOR CLOUD DEPLOYMENT ---
+// This forces the server to use Google DNS to find your database
+require('dns').setServers(['8.8.8.8', '8.8.4.4']);
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -8,10 +12,14 @@ app.use(express.json());
 app.use(cors());
 
 // --- CONNECT TO DATABASE ---
-// This uses the secret link from your .env file
-mongoose.connect(process.env.MONGO_URI)
+// Added serverSelectionTimeoutMS to give the cloud more time to connect
+mongoose.connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 10000, 
+})
     .then(() => console.log("✅ Zinat Database Connected!"))
-    .catch(err => console.log("❌ Connection Error:", err));
+    .catch(err => {
+        console.log("❌ Connection Error Detail:", err.message);
+    });
 
 // --- STUDENT DATA MODEL ---
 const StudentSchema = new mongoose.Schema({
