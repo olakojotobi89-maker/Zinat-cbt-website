@@ -41,7 +41,7 @@ function switchLogin(type) {
     }
 }
 
-function loginStudent() {
+async function loginStudent() {
     const inputReg = document.getElementById('student-reg').value.trim().toUpperCase();
 
     if (inputReg === "") {
@@ -49,20 +49,46 @@ function loginStudent() {
         return;
     }
 
-    const foundStudent = authorizedStudents.find(s => s.reg === inputReg);
+    try {
+        // --- LIVE DATABASE FETCH ---
+        const response = await fetch('https://zinat-cbt-website.onrender.com/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reg: inputReg })
+        });
 
-    if (foundStudent) {
-        // We clean the Reg Number for the photo filename (ZINAT/2026/001 -> ZINAT-2026-001)
-        const photoId = foundStudent.reg.replace(/\//g, "-");
+        const data = await response.json();
 
-        localStorage.setItem('current_student', JSON.stringify({
-            reg: foundStudent.reg,
-            name: foundStudent.name,
-            photoFileName: photoId // Store this for the image source
-        }));
-        window.location.href = "index.html";
-    } else {
-        alert("Access Denied: Registration Number not found in our records.");
+        if (data.success) {
+            const student = data.student;
+            const photoId = student.reg.replace(/\//g, "-");
+
+            localStorage.setItem('current_student', JSON.stringify({
+                reg: student.reg,
+                name: student.name,
+                score: student.score || 0,
+                status: student.status || "Pending",
+                photoFileName: photoId
+            }));
+            window.location.href = "index.html";
+        } else {
+            alert("Access Denied: Registration Number not found in our records.");
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        // Fallback to local list if the server is offline
+        const foundStudent = authorizedStudents.find(s => s.reg === inputReg);
+        if (foundStudent) {
+            const photoId = foundStudent.reg.replace(/\//g, "-");
+            localStorage.setItem('current_student', JSON.stringify({
+                reg: foundStudent.reg,
+                name: foundStudent.name,
+                photoFileName: photoId
+            }));
+            window.location.href = "index.html";
+        } else {
+            alert("Connection error or Reg Number not found.");
+        }
     }
 }
 
