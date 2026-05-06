@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CBT Portal | Zinat Group of Schools</title>
+    <link rel="icon" type="image/png" href="assets/zinat-logo.png">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="school-branding">
+            <img src="zzz-removebg-preview.png" alt="Zinat Logo" class="school-logo">
+            <div class="brand-text">
+                <h1>ZINAT GROUP OF SCHOOLS</h1>
+                <p>CBT Examination Portal</p>
+            </div>
+        </div>
+
+        <!-- Dynamic Student Profile Section -->
+        <div class="profile-center">
+            <div class="profile-ring">
+                <!-- Fallback to default user image initially -->
+                <img id="student-photo" src="images/default-user.png" alt="Student Photo">
+            </div>
+            <p class="profile-label" id="profile-name-display">Loading...</p>
+        </div>
+
+        <div class="header-right">
+            <div class="timer-info">
+                <span class="timer-label">Time Remaining:</span>
+                <span id="timer">00:00:00</span>
+            </div>
+            <button onclick="logout()" class="logout-btn">Log out</button>
+        </div>
+    </header>
+
+    <main class="portal-layout">
+        <aside class="sidebar-container">
+            <div class="sidebar-card info-card">
+                <div class="data-group">
+                    <label>Name:</label>
+                    <div class="data-display" id="display-name">Loading...</div>
+                </div>
+                <div class="data-group">
+                    <label>Registration No:</label>
+                    <div class="data-display" id="display-reg">Loading...</div>
+                </div>
+                <div class="data-group">
+                    <label>Subject:</label>
+                    <div class="data-display" id="subject-name">Loading...</div>
+                </div>
+            </div>
+
+            <div class="sidebar-card map-card">
+                <div class="sidebar-header">
+                    <h3>Question Map</h3>
+                </div>
+                <div class="question-grid" id="question-map"></div>
+                <div class="legend">
+                    <div class="legend-item"><span class="box active"></span> Current</div>
+                    <div class="legend-item"><span class="box answered"></span> Answered</div>
+                    <div class="legend-item"><span class="box flagged"></span> Flagged</div>
+                </div>
+            </div>
+        </aside>
+
+        <section class="question-area">
+            <div class="question-card">
+                <div class="question-card-header">
+                    <span class="question-number">Question 1 of ...</span>
+                    <button id="flag-btn" class="btn-flag">Flag Question</button>
+                </div>
+
+                <div class="question-body">
+                    <div id="question-text">Loading question...</div>
+                </div>
+
+                <div class="options-container" id="options-container"></div>
+
+                <footer class="action-bar">
+                    <div class="nav-btns">
+                        <button id="prev-btn" class="btn btn-outline">Previous</button>
+                        <button id="next-btn" class="btn btn-solid">Next</button>
+                    </div>
+                    <button id="submit-exam" class="btn-submit" onclick="submitExam()">Submit Examination</button>
+                </footer>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/login.js"></script>
+    <script src="js/main.js"></script>
+    
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const studentData = JSON.parse(localStorage.getItem('current_student'));
+            
+            if (!studentData) {
+                window.location.href = 'login.html'; 
+            } else {
+                document.getElementById('display-name').innerText = studentData.name;
+                document.getElementById('display-reg').innerText = studentData.reg;
+                
+                const photoElement = document.getElementById('student-photo');
+                const nameLabel = document.getElementById('profile-name-display');
+                
+                nameLabel.innerText = studentData.name;
+
+                // FIXED: Changed folder path from 'images/students/' to 'images/student/'
+                const photoPath = `image/student/${studentData.photoFileName}.jpg`;
+                photoElement.src = photoPath;
+
+                photoElement.onerror = function() {
+                    this.src = 'zzz-removebg-preview.png'; 
+                };
+            }
+        });
+    </script>
+</body>
+</html>

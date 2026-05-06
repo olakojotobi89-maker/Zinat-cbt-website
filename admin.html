@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zinat Admin | Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="admin-page">
+
+    <header class="main-header">
+        <div class="school-branding">
+            <img src="zzz-removebg-preview.png" alt="Logo" class="school-logo">
+            <div class="school-name">
+                <h1>ZINAT <span>ADMIN PANEL</span></h1>
+            </div>
+        </div>
+        <button onclick="logout()" class="btn-flag" style="background: var(--danger-color); color: white;">Logout</button>
+    </header>
+
+    <div class="admin-wrapper">
+        <aside class="admin-sidebar">
+            <ul>
+                <li id="li-questions" class="active" onclick="showTab('questions')">Manage Questions</li>
+                <li id="li-results" onclick="showTab('results')">Student Results</li>
+                <li id="li-settings" onclick="showTab('settings')">Exam Settings</li>
+            </ul>
+        </aside>
+
+        <main class="admin-content">
+            <section id="tab-questions" class="tab-content active">
+                <div class="header-flex" style="display:flex; justify-content: space-between; align-items:center;">
+                    <h2>Question Bank</h2>
+                    <button type="button" class="btn-add" id="openModalBtn" onclick="openModal()">+ Add New Question</button>
+                </div>
+
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Question Text</th>
+                            <th>Correct</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="question-list"></tbody>
+                </table>
+            </section>
+
+            <section id="tab-results" class="tab-content">
+                <h2>Student Performance</h2>
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Reg Number</th>
+                            <th>Name</th>
+                            <th>Score</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="result-list"></tbody>
+                </table>
+            </section>
+
+            <section id="tab-settings" class="tab-content">
+                <h2>System Settings</h2>
+                <div class="settings-container" style="background:white; padding:20px; border-radius:10px; margin-top:20px;">
+                    <div class="form-group" style="margin-bottom:15px;">
+                        <label>Exam Title</label><br>
+                        <input type="text" id="set-title" style="width:100%; padding:10px;" placeholder="2026 Entrance Exam">
+                    </div>
+                    <div class="form-group" style="margin-bottom:15px;">
+                        <label>Duration (Minutes)</label><br>
+                        <input type="number" id="set-duration" style="width:100%; padding:10px;" value="120">
+                    </div>
+                    <button class="btn-nav btn-primary" onclick="saveSettings()">Save Configuration</button>
+                    <hr style="margin:30px 0;">
+                    <h3 style="color:red;">Danger Zone</h3>
+                    <button class="btn-flag" style="background:red; color:white;" onclick="clearAllData()">Delete Previous Exam Data</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="question-modal" class="modal">
+        <div class="modal-content">
+            <h3>Add New Question</h3>
+            <textarea id="q-text" placeholder="Enter Question"></textarea>
+            <input type="text" id="q-opt-a" placeholder="Option A">
+            <input type="text" id="q-opt-b" placeholder="Option B">
+            <input type="text" id="q-opt-c" placeholder="Option C">
+            <input type="text" id="q-opt-d" placeholder="Option D">
+            
+            <label for="q-correct" style="display:block; margin-top:10px; font-weight:bold;">Correct Answer:</label>
+            <select id="q-correct">
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+            </select>
+            
+            <div class="modal-actions" style="margin-top:15px; display:flex; gap:10px;">
+                <button type="button" id="closeModalBtn" onclick="closeModal()">Cancel</button>
+                <button type="button" class="btn-primary" id="saveQuestionBtn" onclick="saveNewQuestion()">Save Question</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/login.js"></script> <script src="js/script.js"></script> </body>
+</html>
