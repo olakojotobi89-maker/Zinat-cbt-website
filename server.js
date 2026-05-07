@@ -1,18 +1,21 @@
 // --- DNS FIX FOR CLOUD DEPLOYMENT ---
-// This forces the server to use Google DNS to find your database
 require('dns').setServers(['8.8.8.8', '8.8.4.4']);
 
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path'); // Added to handle file paths
 require('dotenv').config();
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
+// --- SERVE STATIC FILES ---
+// This allows the server to load your CSS, Images, and login.js
+app.use(express.static(path.join(__dirname)));
+
 // --- CONNECT TO DATABASE ---
-// Added serverSelectionTimeoutMS to give the cloud more time to connect
 mongoose.connect(process.env.MONGO_URI, {
     serverSelectionTimeoutMS: 10000, 
 })
@@ -30,13 +33,10 @@ const StudentSchema = new mongoose.Schema({
 });
 const Student = mongoose.model('Student', StudentSchema);
 
-// --- FIX: HOME ROUTE (STOPS "CANNOT GET /") ---
+// --- FIX: SHOW THE WEBSITE AT THE HOME ROUTE ---
+// Instead of a message, this now sends the actual login.html file
 app.get('/', (req, res) => {
-    res.status(200).send({
-        status: "Online",
-        message: "Zinat CBT Backend is running successfully!",
-        database: mongoose.connection.readyState === 1 ? "Connected ✅" : "Connecting... ⏳"
-    });
+    res.sendFile(path.join(__dirname, 'login.html'));
 });
 
 // --- LOGIN ROUTE ---
