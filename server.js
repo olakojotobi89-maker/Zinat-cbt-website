@@ -4,7 +4,7 @@ require('dns').setServers(['8.8.8.8', '8.8.4.4']);
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const path = require('path'); // Added to handle file paths
+const path = require('path'); 
 require('dotenv').config();
 
 const app = express();
@@ -12,7 +12,6 @@ app.use(express.json());
 app.use(cors());
 
 // --- SERVE STATIC FILES ---
-// This allows the server to load your CSS, Images, and login.js
 app.use(express.static(path.join(__dirname)));
 
 // --- CONNECT TO DATABASE ---
@@ -41,7 +40,15 @@ const QuestionSchema = new mongoose.Schema({
 });
 const Question = mongoose.model('Question', QuestionSchema);
 
-// --- FIX: SHOW THE WEBSITE AT THE HOME ROUTE ---
+// --- NEW: SETTINGS DATA MODEL ---
+const SettingsSchema = new mongoose.Schema({
+    title: { type: String, default: "Zinat Entrance Exam" },
+    duration: { type: Number, default: 2 },
+    passMark: { type: Number, default: 40 }
+});
+const Settings = mongoose.model('Settings', SettingsSchema);
+
+// --- HOME ROUTE ---
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'login.html'));
 });
@@ -61,11 +68,10 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// --- NEW: SAVE QUESTIONS ROUTE ---
+// --- QUESTIONS ROUTES ---
 app.post('/api/questions', async (req, res) => {
     try {
         const { questions } = req.body;
-        // This clears old questions and saves the new list
         await Question.deleteMany({}); 
         await Question.insertMany(questions);
         res.json({ success: true, message: "Questions saved to cloud!" });
@@ -74,7 +80,6 @@ app.post('/api/questions', async (req, res) => {
     }
 });
 
-// --- NEW: GET QUESTIONS ROUTE ---
 app.get('/api/questions', async (req, res) => {
     try {
         const questions = await Question.find();
@@ -84,11 +89,31 @@ app.get('/api/questions', async (req, res) => {
     }
 });
 
-// --- NEW: DELETE ALL QUESTIONS ROUTE ---
 app.delete('/api/questions', async (req, res) => {
     try {
         await Question.deleteMany({});
         res.json({ success: true, message: "All questions deleted from cloud!" });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- NEW: SETTINGS ROUTES (TIME, TITLE, PASSMARK) ---
+app.post('/api/settings', async (req, res) => {
+    try {
+        const { title, duration, passMark } = req.body;
+        // Upsert: Updates the first document found, or creates it if it doesn't exist
+        await Settings.findOneAndUpdate({}, { title, duration, passMark }, { upsert: true, new: true });
+        res.json({ success: true, message: "Exam settings updated!" });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/settings', async (req, res) => {
+    try {
+        const settings = await Settings.findOne();
+        res.json({ success: true, settings: settings || { title: "Zinat Entrance Exam", duration: 2, passMark: 40 } });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
