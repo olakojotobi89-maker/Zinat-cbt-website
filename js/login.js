@@ -49,15 +49,19 @@ async function loginStudent() {
         return;
     }
 
+    console.log("Attempting login for:", inputReg);
+
     try {
         // 1. TRY LIVE DATABASE FIRST
         const response = await fetch('https://zinat-cbt-website.onrender.com/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            cache: 'no-cache', // Force fresh data
             body: JSON.stringify({ reg: inputReg })
         });
 
         const data = await response.json();
+        console.log("Server Response:", data);
 
         if (data.success) {
             const student = data.student;
@@ -70,14 +74,17 @@ async function loginStudent() {
                 status: student.status || "Pending",
                 photoFileName: photoId
             }));
-            window.location.href = "index.html";
-            return; // Stop here if found in database
+            
+            console.log("Redirecting to index.html...");
+            window.location.replace("index.html"); // .replace is stronger than .href
+            return; 
         }
     } catch (error) {
-        console.error("Database connection error, checking local list...");
+        console.error("Database connection error:", error);
     }
 
     // 2. FALLBACK: IF NOT IN DATABASE OR SERVER ERROR, CHECK YOUR LOCAL LIST
+    console.log("Checking local fallback list...");
     const foundLocal = authorizedStudents.find(s => s.reg === inputReg);
 
     if (foundLocal) {
@@ -90,7 +97,9 @@ async function loginStudent() {
             status: "New",
             photoFileName: photoId
         }));
-        window.location.href = "index.html";
+        
+        console.log("Local student found. Redirecting...");
+        window.location.replace("index.html");
     } else {
         alert("Access Denied: Registration Number not found in our records.");
     }
