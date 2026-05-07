@@ -132,7 +132,6 @@ function startTimer() {
     if (!timerDisplay) return;
 
     const savedTime = localStorage.getItem('zinat_time_left');
-    // If no saved time, use the duration from cloud settings
     timeLeft = savedTime ? parseInt(savedTime) : examSettings.duration * 60; 
 
     const countdown = setInterval(() => {
@@ -153,9 +152,9 @@ function startTimer() {
 }
 
 /**
- * SUBMIT EXAM
+ * SUBMIT EXAM (Updated for Cloud Results)
  */
-function submitExam() {
+async function submitExam() {
     let score = 0;
     questions.forEach(q => {
         if (studentAnswers[q.id] === q.correct) {
@@ -173,19 +172,27 @@ function submitExam() {
     else performanceStatus = "Fail";
 
     const loggedInStudent = JSON.parse(localStorage.getItem('current_student'));
-    let results = JSON.parse(localStorage.getItem('zinat_results')) || [];
-    
-    results.push({
+
+    // CREATE DATA OBJECT FOR SERVER
+    const resultData = {
         reg: loggedInStudent ? loggedInStudent.reg : "N/A",
         name: loggedInStudent ? loggedInStudent.name : "Unknown Student", 
         score: finalScore,
-        status: performanceStatus,
-        date: new Date().toLocaleString()
-    });
+        status: performanceStatus
+    };
+
+    try {
+        // PUSH RESULT TO SERVER
+        await fetch('https://zinat-cbt-website.onrender.com/api/results', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(resultData)
+        });
+    } catch (err) {
+        console.error("Cloud Save Error:", err);
+    }
     
-    localStorage.setItem('zinat_results', JSON.stringify(results));
     localStorage.removeItem('zinat_time_left'); 
-    
     alert(`Exam Submitted Successfully!\nScore: ${finalScore}%\nGrade: ${performanceStatus}`);
     window.location.href = "login.html"; 
 }

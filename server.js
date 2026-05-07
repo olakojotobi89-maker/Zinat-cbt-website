@@ -48,6 +48,16 @@ const SettingsSchema = new mongoose.Schema({
 });
 const Settings = mongoose.model('Settings', SettingsSchema);
 
+// --- NEW: RESULT DATA MODEL (FOR STUDENT SUBMISSIONS) ---
+const ResultSchema = new mongoose.Schema({
+    reg: String,
+    name: String,
+    score: Number,
+    status: String,
+    date: { type: Date, default: Date.now }
+});
+const Result = mongoose.model('Result', ResultSchema);
+
 // --- HOME ROUTE ---
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'login.html'));
@@ -98,11 +108,10 @@ app.delete('/api/questions', async (req, res) => {
     }
 });
 
-// --- NEW: SETTINGS ROUTES (TIME, TITLE, PASSMARK) ---
+// --- SETTINGS ROUTES ---
 app.post('/api/settings', async (req, res) => {
     try {
         const { title, duration, passMark } = req.body;
-        // Upsert: Updates the first document found, or creates it if it doesn't exist
         await Settings.findOneAndUpdate({}, { title, duration, passMark }, { upsert: true, new: true });
         res.json({ success: true, message: "Exam settings updated!" });
     } catch (error) {
@@ -114,6 +123,27 @@ app.get('/api/settings', async (req, res) => {
     try {
         const settings = await Settings.findOne();
         res.json({ success: true, settings: settings || { title: "Zinat Entrance Exam", duration: 2, passMark: 40 } });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- NEW: RESULTS ROUTES (FOR STUDENT SUBMISSIONS) ---
+app.post('/api/results', async (req, res) => {
+    try {
+        const newResult = new Result(req.body);
+        await newResult.save();
+        res.json({ success: true, message: "Result saved to cloud!" });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/results', async (req, res) => {
+    try {
+        // Sort by date so newest results appear at the top
+        const results = await Result.find().sort({ date: -1 });
+        res.json({ success: true, results: results });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
