@@ -30,6 +30,15 @@ const StudentSchema = new mongoose.Schema({
 });
 const Student = mongoose.model('Student', StudentSchema);
 
+// --- FIX: HOME ROUTE (STOPS "CANNOT GET /") ---
+app.get('/', (req, res) => {
+    res.status(200).send({
+        status: "Online",
+        message: "Zinat CBT Backend is running successfully!",
+        database: mongoose.connection.readyState === 1 ? "Connected ✅" : "Connecting... ⏳"
+    });
+});
+
 // --- LOGIN ROUTE ---
 app.post('/api/login', async (req, res) => {
     const { reg } = req.body;
