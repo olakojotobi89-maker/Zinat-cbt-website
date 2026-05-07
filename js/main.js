@@ -22,14 +22,12 @@ async function initExam() {
     document.getElementById('question-text').innerText = "Loading Exam Data... ⏳";
 
     try {
-        // 1. FETCH SETTINGS (Title, Time, PassMark)
         const settingsResponse = await fetch('https://zinat-cbt-website.onrender.com/api/settings');
         const settingsData = await settingsResponse.json();
         if (settingsData.success) {
             examSettings = settingsData.settings;
         }
 
-        // 2. FETCH QUESTIONS
         const qResponse = await fetch('https://zinat-cbt-website.onrender.com/api/questions');
         const qData = await qResponse.json();
 
@@ -55,7 +53,6 @@ async function initExam() {
         return;
     }
 
-    // Apply the Cloud Settings to the UI
     const subjectDisplay = document.getElementById('subject-name');
     if (subjectDisplay) {
         subjectDisplay.innerText = examSettings.title;
@@ -124,8 +121,18 @@ function saveAnswer(questionId, choice) {
     updateSidebarUI();
 }
 
+// Added Flag functionality to match your UI logic
+function toggleFlag() {
+    if (flaggedQuestions.has(currentQuestionIndex)) {
+        flaggedQuestions.delete(currentQuestionIndex);
+    } else {
+        flaggedQuestions.add(currentQuestionIndex);
+    }
+    updateSidebarUI();
+}
+
 /**
- * TIMER LOGIC (Uses Cloud Duration)
+ * TIMER LOGIC
  */
 function startTimer() {
     const timerDisplay = document.getElementById('timer');
@@ -152,7 +159,7 @@ function startTimer() {
 }
 
 /**
- * SUBMIT EXAM (Updated for Cloud Results)
+ * SUBMIT EXAM 
  */
 async function submitExam() {
     let score = 0;
@@ -173,7 +180,6 @@ async function submitExam() {
 
     const loggedInStudent = JSON.parse(localStorage.getItem('current_student'));
 
-    // CREATE DATA OBJECT FOR SERVER
     const resultData = {
         reg: loggedInStudent ? loggedInStudent.reg : "N/A",
         name: loggedInStudent ? loggedInStudent.name : "Unknown Student", 
@@ -182,12 +188,16 @@ async function submitExam() {
     };
 
     try {
-        // PUSH RESULT TO SERVER
-        await fetch('https://zinat-cbt-website.onrender.com/api/results', {
+        // We AWAIT the fetch so the browser doesn't leave the page until saved
+        const response = await fetch('https://zinat-cbt-website.onrender.com/api/results', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(resultData)
         });
+
+        if (!response.ok) {
+            console.error("Server refused to save result");
+        }
     } catch (err) {
         console.error("Cloud Save Error:", err);
     }
@@ -202,6 +212,8 @@ async function submitExam() {
  */
 window.addEventListener('DOMContentLoaded', () => {
     initExam();
+    
+    // Connect Next Button
     const nextBtn = document.getElementById('next-btn');
     if (nextBtn) {
         nextBtn.onclick = () => {
@@ -211,6 +223,8 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         };
     }
+
+    // Connect Prev Button
     const prevBtn = document.getElementById('prev-btn');
     if (prevBtn) {
         prevBtn.onclick = () => {
@@ -220,4 +234,14 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         };
     }
+
+    // Connect Flag Button
+    const flagBtn = document.getElementById('flag-btn');
+    if (flagBtn) flagBtn.onclick = toggleFlag;
+
+    // Connect Submit Button (if you have one on the UI)
+    const submitBtn = document.getElementById('submit-btn');
+    if (submitBtn) submitBtn.onclick = () => {
+        if(confirm("Are you sure you want to submit?")) submitExam();
+    };
 });
