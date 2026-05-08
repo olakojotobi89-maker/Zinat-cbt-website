@@ -38,14 +38,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /**
  * REFRESH DATA FROM CLOUD
- * Pulls current questions and settings so the Admin sees what is live
  */
 async function refreshData() {
     try {
         const response = await fetch('https://zinat-cbt-website.onrender.com/api/questions');
         const data = await response.json();
         if (data.success) {
-            // Convert MongoDB format back to your frontend format
             questions = data.questions.map(q => ({
                 id: q._id,
                 text: q.question,
@@ -80,14 +78,12 @@ async function saveNewQuestion() {
         return;
     }
 
-    // Format for the Server
     const newQuestion = {
         question: text,
         options: [a, b, c, d],
         correctAnswer: correct
     };
 
-    // We add it to our local list and then push the WHOLE list to stay synced
     const serverReadyList = questions.map(q => ({
         question: q.text,
         options: [q.options.A, q.options.B, q.options.C, q.options.D],
@@ -105,8 +101,7 @@ async function saveNewQuestion() {
         if (response.ok) {
             alert("Question Saved to Cloud!");
             closeModal();
-            refreshData(); // Reload to show the new question
-            // Clear form
+            refreshData(); 
             document.getElementById('q-text').value = "";
             document.getElementById('q-opt-a').value = "";
             document.getElementById('q-opt-b').value = "";
@@ -155,25 +150,39 @@ async function deleteQuestion(id) {
     }
 }
 
-// --- Results & Settings (CLOUD SYNC) ---
-function renderAdminResults() {
+// --- Results & Settings (FIXED FOR CLOUD SYNC) ---
+async function renderAdminResults() {
     const list = document.getElementById('result-list');
     if (!list) return;
-    const results = JSON.parse(localStorage.getItem('zinat_results')) || [];
-    list.innerHTML = results.map(r => `
-        <tr>
-            <td>${r.reg}</td>
-            <td>${r.name}</td>
-            <td>${r.score}%</td>
-            <td>${r.status}</td>
-        </tr>
-    `).join('');
+
+    list.innerHTML = "<tr><td colspan='4'>Fetching Results... ⏳</td></tr>";
+
+    try {
+        const response = await fetch('https://zinat-cbt-website.onrender.com/api/results');
+        const data = await response.json();
+
+        if (data.success && data.results.length > 0) {
+            list.innerHTML = data.results.map(r => `
+                <tr>
+                    <td>${r.reg}</td>
+                    <td>${r.name}</td>
+                    <td>${r.score}%</td>
+                    <td>${r.status}</td>
+                </tr>
+            `).join('');
+        } else {
+            list.innerHTML = "<tr><td colspan='4'>No results found in the cloud yet.</td></tr>";
+        }
+    } catch (err) {
+        console.error("Cloud Result Fetch Error:", err);
+        list.innerHTML = "<tr><td colspan='4'>Error loading results from server.</td></tr>";
+    }
 }
 
 async function saveSettings() {
     const title = document.getElementById('set-title').value;
     const duration = document.getElementById('set-duration').value;
-    const passMark = 40; // Default passmark
+    const passMark = 40; 
 
     try {
         const response = await fetch('https://zinat-cbt-website.onrender.com/api/settings', {
@@ -188,8 +197,5 @@ async function saveSettings() {
 }
 
 function clearAllData() {
-    if(confirm("Delete all student records?")) {
-        localStorage.removeItem('zinat_results');
-        renderAdminResults();
-    }
+    alert("Manual clearing of cloud results is disabled for safety. Please contact the DB admin to wipe records.");
 }

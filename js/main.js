@@ -121,7 +121,6 @@ function saveAnswer(questionId, choice) {
     updateSidebarUI();
 }
 
-// Added Flag functionality to match your UI logic
 function toggleFlag() {
     if (flaggedQuestions.has(currentQuestionIndex)) {
         flaggedQuestions.delete(currentQuestionIndex);
@@ -188,7 +187,7 @@ async function submitExam() {
     };
 
     try {
-        // We AWAIT the fetch so the browser doesn't leave the page until saved
+        // Send to Cloud
         const response = await fetch('https://zinat-cbt-website.onrender.com/api/results', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -200,6 +199,10 @@ async function submitExam() {
         }
     } catch (err) {
         console.error("Cloud Save Error:", err);
+        // Fail-safe: Save to local storage only if the internet is down
+        let localResults = JSON.parse(localStorage.getItem('zinat_results')) || [];
+        localResults.push(resultData);
+        localStorage.setItem('zinat_results', JSON.stringify(localResults));
     }
     
     localStorage.removeItem('zinat_time_left'); 
@@ -213,7 +216,6 @@ async function submitExam() {
 window.addEventListener('DOMContentLoaded', () => {
     initExam();
     
-    // Connect Next Button
     const nextBtn = document.getElementById('next-btn');
     if (nextBtn) {
         nextBtn.onclick = () => {
@@ -224,7 +226,6 @@ window.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Connect Prev Button
     const prevBtn = document.getElementById('prev-btn');
     if (prevBtn) {
         prevBtn.onclick = () => {
@@ -235,11 +236,9 @@ window.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Connect Flag Button
     const flagBtn = document.getElementById('flag-btn');
     if (flagBtn) flagBtn.onclick = toggleFlag;
 
-    // Connect Submit Button (if you have one on the UI)
     const submitBtn = document.getElementById('submit-btn');
     if (submitBtn) submitBtn.onclick = () => {
         if(confirm("Are you sure you want to submit?")) submitExam();
