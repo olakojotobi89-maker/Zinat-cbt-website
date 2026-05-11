@@ -63,12 +63,24 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'login.html'));
 });
 
-// --- LOGIN ROUTE ---
+// --- LOGIN ROUTE (Updated for Security) ---
 app.post('/api/login', async (req, res) => {
     const { reg } = req.body;
     try {
+        // 1. Check if the student exists
         const student = await Student.findOne({ reg: reg });
+        
         if (student) {
+            // 2. Check if this student has already submitted a result
+            const alreadyFinished = await Result.findOne({ reg: reg });
+            if (alreadyFinished) {
+                return res.status(403).json({ 
+                    success: false, 
+                    message: "You have already submitted this exam and cannot take it again." 
+                });
+            }
+            
+            // If they haven't submitted, allow login
             res.json({ success: true, student: student });
         } else {
             res.status(404).json({ success: false, message: "Reg Number not found!" });

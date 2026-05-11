@@ -18,6 +18,31 @@ let timeLeft;
  */
 async function initExam() {
     if (!document.getElementById('question-text')) return; 
+
+    // --- SESSION GUARD: Prevent Redo and Unauthorized Access ---
+    const loggedInStudent = JSON.parse(localStorage.getItem('current_student'));
+    
+    if (!loggedInStudent) {
+        window.location.replace("login.html");
+        return;
+    }
+
+    try {
+        // Double check results database to ensure this student hasn't submitted already
+        const checkRes = await fetch('https://zinat-cbt-website.onrender.com/api/results');
+        const checkData = await checkRes.json();
+        
+        if (checkData.success) {
+            const hasFinished = checkData.results.some(r => r.reg === loggedInStudent.reg);
+            if (hasFinished) {
+                alert("You have already submitted this exam. You cannot take it again.");
+                window.location.replace("login.html");
+                return;
+            }
+        }
+    } catch (e) {
+        console.warn("Security check bypass: Proceeding with caution.");
+    }
     
     document.getElementById('question-text').innerText = "Loading Exam Data... ⏳";
 
@@ -187,7 +212,6 @@ async function submitExam() {
     };
 
     try {
-        // Send to Cloud
         const response = await fetch('https://zinat-cbt-website.onrender.com/api/results', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -199,7 +223,6 @@ async function submitExam() {
         }
     } catch (err) {
         console.error("Cloud Save Error:", err);
-        // Fail-safe: Save to local storage only if the internet is down
         let localResults = JSON.parse(localStorage.getItem('zinat_results')) || [];
         localResults.push(resultData);
         localStorage.setItem('zinat_results', JSON.stringify(localResults));
@@ -207,7 +230,7 @@ async function submitExam() {
     
     localStorage.removeItem('zinat_time_left'); 
     alert(`Exam Submitted Successfully!\nScore: ${finalScore}%\nGrade: ${performanceStatus}`);
-    window.location.href = "login.html"; 
+    window.location.replace("login.html"); 
 }
 
 /**

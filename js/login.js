@@ -56,7 +56,7 @@ async function loginStudent() {
         const response = await fetch('https://zinat-cbt-website.onrender.com/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            cache: 'no-cache', // Force fresh data
+            cache: 'no-cache', 
             body: JSON.stringify({ reg: inputReg })
         });
 
@@ -76,14 +76,20 @@ async function loginStudent() {
             }));
             
             console.log("Redirecting to index.html...");
-            window.location.replace("index.html"); // .replace is stronger than .href
+            window.location.replace("index.html"); 
             return; 
+        } else {
+            // NEW: If server says they already submitted (Status 403)
+            if (response.status === 403) {
+                alert(data.message);
+                return;
+            }
         }
     } catch (error) {
         console.error("Database connection error:", error);
     }
 
-    // 2. FALLBACK: IF NOT IN DATABASE OR SERVER ERROR, CHECK YOUR LOCAL LIST
+    // 2. FALLBACK: ONLY IF NOT IN DATABASE AND NOT BLOCKED BY SERVER
     console.log("Checking local fallback list...");
     const foundLocal = authorizedStudents.find(s => s.reg === inputReg);
 
