@@ -115,7 +115,7 @@ function loginAdmin() {
     const user = document.getElementById('admin-user').value;
     const pass = document.getElementById('admin-pass').value;
 
-    if (user === "Zinat schools" && pass === "Zinatschools") {
+    if (user === "Zinat schools" && pass === "Smurf123") {
         window.location.href = "admin.html";
     } else {
         alert("Invalid Admin Credentials!");

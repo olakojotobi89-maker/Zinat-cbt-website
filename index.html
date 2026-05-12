@@ -23,7 +23,6 @@
         <!-- Dynamic Student Profile Section -->
         <div class="profile-center">
             <div class="profile-ring">
-                <!-- Fallback to default user image initially -->
                 <img id="student-photo" src="images/default-user.png" alt="Student Photo">
             </div>
             <p class="profile-label" id="profile-name-display">Loading...</p>
@@ -92,6 +91,22 @@
         </section>
     </main>
 
+    <!-- NEW: Subject Selection Modal -->
+    <div id="subject-modal" class="modal-overlay">
+        <div class="modal-content-subject">
+            <h2>Select Your Subject</h2>
+            <p>Please choose the exam you are taking today.</p>
+            <div class="subject-grid" id="subject-list">
+                <!-- Subjects will be injected here by main.js -->
+                <button class="subject-btn" onclick="startSubject('Mathematics')">Mathematics</button>
+                <button class="subject-btn" onclick="startSubject('English')">English Language</button>
+                <button class="subject-btn" onclick="startSubject('Biology')">Biology</button>
+                <button class="subject-btn" onclick="startSubject('Chemistry')">Chemistry</button>
+            </div>
+            <button class="btn-close-modal" onclick="logout()">Cancel / Exit</button>
+        </div>
+    </div>
+
     <script src="js/login.js"></script>
     <script src="js/main.js"></script>
     
@@ -110,15 +125,27 @@
                 
                 nameLabel.innerText = studentData.name;
 
-                // FIXED: Changed folder path from 'images/students/' to 'images/student/'
                 const photoPath = `image/student/${studentData.photoFileName}.jpg`;
                 photoElement.src = photoPath;
 
                 photoElement.onerror = function() {
                     this.src = 'zzz-removebg-preview.png'; 
                 };
+
+                // Show the subject modal as soon as the page loads
+                document.getElementById('subject-modal').style.display = 'flex';
             }
         });
+
+        // Function to close modal and update the UI
+        function startSubject(subject) {
+            document.getElementById('subject-modal').style.display = 'none';
+            document.getElementById('subject-name').innerText = subject;
+            // You can trigger your exam loading logic here
+            if (typeof loadQuestions === "function") {
+                loadQuestions(subject);
+            }
+        }
     </script>
 </body>
 </html>

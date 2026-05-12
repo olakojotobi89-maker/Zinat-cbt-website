@@ -11,6 +11,7 @@ let currentQuestionIndex = 0;
 let studentAnswers = {};
 let flaggedQuestions = new Set();
 let timeLeft; 
+let isSubmitting = false; // Prevents double submission
 
 /**
  * INIT EXAM
@@ -19,23 +20,26 @@ let timeLeft;
 async function initExam() {
     if (!document.getElementById('question-text')) return; 
 
-    // --- SESSION GUARD: Prevent Redo and Unauthorized Access ---
     const loggedInStudent = JSON.parse(localStorage.getItem('current_student'));
+    const selectedSubject = localStorage.getItem('selected_subject');
     
-    if (!loggedInStudent) {
+    // --- SESSION GUARD ---
+    if (!loggedInStudent || !selectedSubject) {
         window.location.replace("login.html");
         return;
     }
 
     try {
-        // Double check results database to ensure this student hasn't submitted already
+        // Double check results to ensure student hasn't submitted THIS subject already
         const checkRes = await fetch('https://zinat-cbt-website.onrender.com/api/results');
         const checkData = await checkRes.json();
         
         if (checkData.success) {
-            const hasFinished = checkData.results.some(r => r.reg === loggedInStudent.reg);
+            const hasFinished = checkData.results.some(r => 
+                r.reg === loggedInStudent.reg && r.subject === selectedSubject
+            );
             if (hasFinished) {
-                alert("You have already submitted this exam. You cannot take it again.");
+                alert(`You have already submitted the ${selectedSubject} exam.`);
                 window.location.replace("login.html");
                 return;
             }
@@ -44,7 +48,7 @@ async function initExam() {
         console.warn("Security check bypass: Proceeding with caution.");
     }
     
-    document.getElementById('question-text').innerText = "Loading Exam Data... ⏳";
+    document.getElementById('question-text').innerText = `Loading ${selectedSubject} Data... ⏳`;
 
     try {
         const settingsResponse = await fetch('https://zinat-cbt-website.onrender.com/api/settings');
@@ -53,7 +57,8 @@ async function initExam() {
             examSettings = settingsData.settings;
         }
 
-        const qResponse = await fetch('https://zinat-cbt-website.onrender.com/api/questions');
+        // FETCH QUESTIONS FOR SPECIFIC SUBJECT ONLY
+        const qResponse = await fetch(`https://zinat-cbt-website.onrender.com/api/questions?subject=${encodeURIComponent(selectedSubject)}`);
         const qData = await qResponse.json();
 
         if (qData.success && qData.questions.length > 0) {
@@ -69,7 +74,7 @@ async function initExam() {
                 correct: q.correctAnswer
             }));
         } else {
-            document.getElementById('question-text').innerText = "No questions found. Contact Admin.";
+            document.getElementById('question-text').innerText = "No questions found for this subject. Contact Admin.";
             return;
         }
     } catch (error) {
@@ -80,12 +85,38 @@ async function initExam() {
 
     const subjectDisplay = document.getElementById('subject-name');
     if (subjectDisplay) {
-        subjectDisplay.innerText = examSettings.title;
+        subjectDisplay.innerText = `${selectedSubject} - ${examSettings.title}`;
     }
     
     generateQuestionMap();
     renderQuestion(currentQuestionIndex);
     startTimer();
+    enableSecurity(); // Activate anti-cheating
+}
+
+/**
+ * ANTI-MALPRACTICE SECURITY
+ */
+function enableSecurity() {
+    // Detect tab switching or minimizing
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden' && !isSubmitting) {
+            forceSubmit("System detected tab switching or minimization.");
+        }
+    });
+
+    // Detect clicking away from the browser window
+    window.addEventListener('blur', () => {
+        if (!isSubmitting) {
+            forceSubmit("System detected window focus loss (clicking away).");
+        }
+    });
+}
+
+function forceSubmit(reason) {
+    isSubmitting = true;
+    alert(`SECURITY ALERT: ${reason}\nYour exam is being submitted automatically.`);
+    submitExam();
 }
 
 /**
@@ -186,6 +217,9 @@ function startTimer() {
  * SUBMIT EXAM 
  */
 async function submitExam() {
+    if (isSubmitting && timeLeft > 0) return; // Prevent double trigger unless forced
+    isSubmitting = true;
+
     let score = 0;
     questions.forEach(q => {
         if (studentAnswers[q.id] === q.correct) {
@@ -203,10 +237,12 @@ async function submitExam() {
     else performanceStatus = "Fail";
 
     const loggedInStudent = JSON.parse(localStorage.getItem('current_student'));
+    const selectedSubject = localStorage.getItem('selected_subject');
 
     const resultData = {
         reg: loggedInStudent ? loggedInStudent.reg : "N/A",
         name: loggedInStudent ? loggedInStudent.name : "Unknown Student", 
+        subject: selectedSubject || "General",
         score: finalScore,
         status: performanceStatus
     };
@@ -229,7 +265,8 @@ async function submitExam() {
     }
     
     localStorage.removeItem('zinat_time_left'); 
-    alert(`Exam Submitted Successfully!\nScore: ${finalScore}%\nGrade: ${performanceStatus}`);
+    localStorage.removeItem('selected_subject'); // Clear subject after submission
+    alert(`Exam Submitted Successfully!\nSubject: ${resultData.subject}\nScore: ${finalScore}%\nGrade: ${performanceStatus}`);
     window.location.replace("login.html"); 
 }
 

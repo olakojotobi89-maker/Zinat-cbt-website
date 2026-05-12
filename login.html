@@ -24,7 +24,7 @@
                 <label>Registration Number</label>
                 <input type="text" id="student-reg" placeholder="e.g. ZINAT/2026/001" required>
             </div>
-            <button type="button" class="btn-login" onclick="loginStudent()">Start Examination</button>
+            <button type="button" class="btn-login" onclick="loginStudent()">Continue to Subjects</button>
         </form>
 
         <form id="admin-form" class="login-form" style="display: none;">
@@ -40,6 +40,19 @@
         </form>
 
         <p class="login-footer">&copy; 2026 Zinat Group of Schools</p>
+    </div>
+
+    <!-- NEW: SUBJECT SELECTION MODAL -->
+    <div id="subject-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h2>Select Subject</h2>
+            <p>Please select the exam you want to take now:</p>
+            <div id="subject-list-container" class="subject-grid">
+                <!-- Subjects will be loaded here dynamically -->
+                <p>Loading available subjects...</p>
+            </div>
+            <button class="btn-close" onclick="closeSubjectModal()">Cancel</button>
+        </div>
     </div>
 
     <script src="js/login.js"></script>
