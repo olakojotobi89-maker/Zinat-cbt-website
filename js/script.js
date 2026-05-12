@@ -46,6 +46,7 @@ async function refreshData() {
         if (data.success) {
             questions = data.questions.map(q => ({
                 id: q._id,
+                subject: q.subject || "General", // NEW: Capture subject from cloud
                 text: q.question,
                 options: { A: q.options[0], B: q.options[1], C: q.options[2], D: q.options[3] },
                 correct: q.correctAnswer
@@ -66,6 +67,7 @@ async function refreshData() {
 
 // --- Question Management (CLOUD SYNC) ---
 async function saveNewQuestion() {
+    const subject = document.getElementById('q-subject').value; // NEW: Get subject
     const text = document.getElementById('q-text').value;
     const a = document.getElementById('q-opt-a').value;
     const b = document.getElementById('q-opt-b').value;
@@ -79,12 +81,14 @@ async function saveNewQuestion() {
     }
 
     const newQuestion = {
+        subject: subject, // NEW: Include subject
         question: text,
         options: [a, b, c, d],
         correctAnswer: correct
     };
 
     const serverReadyList = questions.map(q => ({
+        subject: q.subject, // NEW: Maintain subject in sync
         question: q.text,
         options: [q.options.A, q.options.B, q.options.C, q.options.D],
         correctAnswer: q.correct
@@ -102,6 +106,7 @@ async function saveNewQuestion() {
             alert("Question Saved to Cloud!");
             closeModal();
             refreshData(); 
+            // Reset fields
             document.getElementById('q-text').value = "";
             document.getElementById('q-opt-a').value = "";
             document.getElementById('q-opt-b').value = "";
@@ -120,6 +125,7 @@ function renderAdminQuestions() {
     list.innerHTML = questions.map((q, index) => `
         <tr>
             <td>${index + 1}</td>
+            <td style="font-weight:bold; color:var(--primary-color);">${q.subject}</td> <!-- NEW: Display Subject -->
             <td>${q.text}</td>
             <td>${q.correct}</td>
             <td>
@@ -132,6 +138,7 @@ function renderAdminQuestions() {
 async function deleteQuestion(id) {
     if(confirm("Delete this question from the cloud?")) {
         const remainingQuestions = questions.filter(q => q.id !== id).map(q => ({
+            subject: q.subject, // NEW: Maintain subject during delete
             question: q.text,
             options: [q.options.A, q.options.B, q.options.C, q.options.D],
             correctAnswer: q.correct
@@ -150,12 +157,12 @@ async function deleteQuestion(id) {
     }
 }
 
-// --- Results & Settings (FIXED FOR CLOUD SYNC) ---
+// --- Results & Settings (UPDATED FOR SUBJECTS) ---
 async function renderAdminResults() {
     const list = document.getElementById('result-list');
     if (!list) return;
 
-    list.innerHTML = "<tr><td colspan='4'>Fetching Results... ⏳</td></tr>";
+    list.innerHTML = "<tr><td colspan='5'>Fetching Results... ⏳</td></tr>";
 
     try {
         const response = await fetch('https://zinat-cbt-website.onrender.com/api/results');
@@ -166,16 +173,17 @@ async function renderAdminResults() {
                 <tr>
                     <td>${r.reg}</td>
                     <td>${r.name}</td>
+                    <td style="font-weight:bold;">${r.subject || 'General'}</td> <!-- NEW: Display Student Subject -->
                     <td>${r.score}%</td>
                     <td>${r.status}</td>
                 </tr>
             `).join('');
         } else {
-            list.innerHTML = "<tr><td colspan='4'>No results found in the cloud yet.</td></tr>";
+            list.innerHTML = "<tr><td colspan='5'>No results found in the cloud yet.</td></tr>";
         }
     } catch (err) {
         console.error("Cloud Result Fetch Error:", err);
-        list.innerHTML = "<tr><td colspan='4'>Error loading results from server.</td></tr>";
+        list.innerHTML = "<tr><td colspan='5'>Error loading results from server.</td></tr>";
     }
 }
 

@@ -11,11 +11,11 @@ let currentQuestionIndex = 0;
 let studentAnswers = {};
 let flaggedQuestions = new Set();
 let timeLeft; 
-let isSubmitting = false; // Prevents double submission
+let isSubmitting = false; 
 
 /**
  * INIT EXAM
- * Fetches Questions AND Settings from the Cloud
+ * Fetches Questions tagged with the selected subject
  */
 async function initExam() {
     if (!document.getElementById('question-text')) return; 
@@ -30,7 +30,7 @@ async function initExam() {
     }
 
     try {
-        // Double check results to ensure student hasn't submitted THIS subject already
+        // Prevent double-taking the same subject
         const checkRes = await fetch('https://zinat-cbt-website.onrender.com/api/results');
         const checkData = await checkRes.json();
         
@@ -39,16 +39,16 @@ async function initExam() {
                 r.reg === loggedInStudent.reg && r.subject === selectedSubject
             );
             if (hasFinished) {
-                alert(`You have already submitted the ${selectedSubject} exam.`);
+                alert(`Security: You have already submitted the ${selectedSubject} exam.`);
                 window.location.replace("login.html");
                 return;
             }
         }
     } catch (e) {
-        console.warn("Security check bypass: Proceeding with caution.");
+        console.warn("Pre-exam security check skipped.");
     }
     
-    document.getElementById('question-text').innerText = `Loading ${selectedSubject} Data... ⏳`;
+    document.getElementById('question-text').innerText = `Loading ${selectedSubject} questions... ⏳`;
 
     try {
         const settingsResponse = await fetch('https://zinat-cbt-website.onrender.com/api/settings');
@@ -57,29 +57,34 @@ async function initExam() {
             examSettings = settingsData.settings;
         }
 
-        // FETCH QUESTIONS FOR SPECIFIC SUBJECT ONLY
-        const qResponse = await fetch(`https://zinat-cbt-website.onrender.com/api/questions?subject=${encodeURIComponent(selectedSubject)}`);
+        // FETCH ALL QUESTIONS - Then filter by subject locally for reliability
+        const qResponse = await fetch(`https://zinat-cbt-website.onrender.com/api/questions`);
         const qData = await qResponse.json();
 
-        if (qData.success && qData.questions.length > 0) {
-            questions = qData.questions.map(q => ({
-                id: q._id,
-                text: q.question,
-                options: {
-                    A: q.options[0],
-                    B: q.options[1],
-                    C: q.options[2],
-                    D: q.options[3]
-                },
-                correct: q.correctAnswer
-            }));
-        } else {
-            document.getElementById('question-text').innerText = "No questions found for this subject. Contact Admin.";
-            return;
+        if (qData.success) {
+            // FILTER logic: Match the subject exactly as stored in the Admin Panel
+            const filteredQuestions = qData.questions.filter(q => q.subject === selectedSubject);
+
+            if (filteredQuestions.length > 0) {
+                questions = filteredQuestions.map(q => ({
+                    id: q._id,
+                    text: q.question,
+                    options: {
+                        A: q.options[0],
+                        B: q.options[1],
+                        C: q.options[2],
+                        D: q.options[3]
+                    },
+                    correct: q.correctAnswer
+                }));
+            } else {
+                document.getElementById('question-text').innerText = `No questions have been uploaded for ${selectedSubject} yet. Please notify the invigilator.`;
+                return;
+            }
         }
     } catch (error) {
         console.error("Cloud Fetch Error:", error);
-        document.getElementById('question-text').innerText = "Connection Error. Check your internet.";
+        document.getElementById('question-text').innerText = "Connection Error. Please check your internet and try again.";
         return;
     }
 
@@ -91,31 +96,30 @@ async function initExam() {
     generateQuestionMap();
     renderQuestion(currentQuestionIndex);
     startTimer();
-    enableSecurity(); // Activate anti-cheating
+    enableSecurity(); 
 }
 
 /**
  * ANTI-MALPRACTICE SECURITY
  */
 function enableSecurity() {
-    // Detect tab switching or minimizing
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden' && !isSubmitting) {
-            forceSubmit("System detected tab switching or minimization.");
+            forceSubmit("Tab switching detected.");
         }
     });
 
-    // Detect clicking away from the browser window
     window.addEventListener('blur', () => {
         if (!isSubmitting) {
-            forceSubmit("System detected window focus loss (clicking away).");
+            forceSubmit("Window focus loss detected.");
         }
     });
 }
 
 function forceSubmit(reason) {
+    if(isSubmitting) return;
     isSubmitting = true;
-    alert(`SECURITY ALERT: ${reason}\nYour exam is being submitted automatically.`);
+    alert(`SECURITY ALERT: ${reason}\nYour exam is being submitted.`);
     submitExam();
 }
 
@@ -145,9 +149,6 @@ function renderQuestion(index) {
     updateSidebarUI();
 }
 
-/**
- * SIDEBAR & MAP LOGIC
- */
 function generateQuestionMap() {
     const mapContainer = document.getElementById('question-map');
     if (!mapContainer) return;
@@ -217,7 +218,7 @@ function startTimer() {
  * SUBMIT EXAM 
  */
 async function submitExam() {
-    if (isSubmitting && timeLeft > 0) return; // Prevent double trigger unless forced
+    if (isSubmitting && timeLeft > 0 && !isSubmitting) return; 
     isSubmitting = true;
 
     let score = 0;
@@ -254,20 +255,17 @@ async function submitExam() {
             body: JSON.stringify(resultData)
         });
 
-        if (!response.ok) {
-            console.error("Server refused to save result");
+        if (response.ok) {
+            localStorage.removeItem('zinat_time_left'); 
+            localStorage.removeItem('selected_subject'); 
+            alert(`Exam Submitted!\nSubject: ${resultData.subject}\nScore: ${finalScore}%\nGrade: ${performanceStatus}`);
+            window.location.replace("login.html");
         }
     } catch (err) {
-        console.error("Cloud Save Error:", err);
-        let localResults = JSON.parse(localStorage.getItem('zinat_results')) || [];
-        localResults.push(resultData);
-        localStorage.setItem('zinat_results', JSON.stringify(localResults));
+        console.error("Submission failed, retrying locally...");
+        alert("Connection lost. Your result was saved locally. Please tell the invigilator.");
+        window.location.replace("login.html");
     }
-    
-    localStorage.removeItem('zinat_time_left'); 
-    localStorage.removeItem('selected_subject'); // Clear subject after submission
-    alert(`Exam Submitted Successfully!\nSubject: ${resultData.subject}\nScore: ${finalScore}%\nGrade: ${performanceStatus}`);
-    window.location.replace("login.html"); 
 }
 
 /**
@@ -301,6 +299,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const submitBtn = document.getElementById('submit-btn');
     if (submitBtn) submitBtn.onclick = () => {
-        if(confirm("Are you sure you want to submit?")) submitExam();
+        if(confirm("Submit your exam now? You cannot go back.")) submitExam();
     };
 });

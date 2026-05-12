@@ -38,6 +38,7 @@
                     <thead>
                         <tr>
                             <th>#</th>
+                            <th>Subject</th>
                             <th>Question Text</th>
                             <th>Correct</th>
                             <th>Action</th>
@@ -54,6 +55,7 @@
                         <tr>
                             <th>Reg Number</th>
                             <th>Name</th>
+                            <th>Subject</th>
                             <th>Score</th>
                             <th>Status</th>
                         </tr>
@@ -82,9 +84,44 @@
         </main>
     </div>
 
+    <!-- Question Management Modal -->
     <div id="question-modal" class="modal">
         <div class="modal-content">
             <h3>Add New Question</h3>
+            
+            <label for="q-subject" style="display:block; margin-top:10px; font-weight:bold;">Subject:</label>
+            <select id="q-subject" style="width:100%; padding:10px; margin-bottom:15px; border-radius: 5px; border: 1px solid #ccc;">
+                <optgroup label="Senior Secondary (SSS)">
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="English Language">English Language</option>
+                    <option value="Biology">Biology</option>
+                    <option value="Chemistry">Chemistry</option>
+                    <option value="Physics">Physics</option>
+                    <option value="Agricultural Science">Agricultural Science</option>
+                    <option value="Economics">Economics</option>
+                    <option value="Government">Government</option>
+                    <option value="Civic Education">Civic Education</option>
+                    <option value="Commerce">Commerce</option>
+                    <option value="Further Mathematics">Further Mathematics</option>
+                </optgroup>
+                <optgroup label="Junior Secondary (JSS)">
+                    <option value="Basic Science">Basic Science</option>
+                    <option value="Basic Technology">Basic Technology</option>
+                    <option value="National Value">National Value (Social/Civic)</option>
+                    <option value="Pre-Vocational Studies">Pre-Vocational Studies</option>
+                    <option value="PHE">PHE</option>
+                    <option value="Business Studies">Business Studies</option>
+                    <option value="CCA">Cultural and Creative Arts</option>
+                </optgroup>
+                <optgroup label="Vocational & Languages">
+                    <option value="Computer Studies">Computer Studies</option>
+                    <option value="Yoruba">Yoruba</option>
+                    <option value="IRS">IRS</option>
+                    <option value="CRS">CRS</option>
+                    <option value="Literature-in-English">Literature-in-English</option>
+                </optgroup>
+            </select>
+
             <textarea id="q-text" placeholder="Enter Question"></textarea>
             <input type="text" id="q-opt-a" placeholder="Option A">
             <input type="text" id="q-opt-b" placeholder="Option B">
@@ -106,5 +143,7 @@
         </div>
     </div>
 
-    <script src="js/login.js"></script> <script src="js/script.js"></script> </body>
+    <script src="js/login.js"></script> 
+    <script src="js/script.js"></script> 
+</body>
 </html>
