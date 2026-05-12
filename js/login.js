@@ -22,6 +22,16 @@ const authorizedStudents = [
     { reg: "ZINAT/2026/20", name: "Odubella Moyosore" }
 ];
 
+// FULL SUBJECT LIST (Matches Admin Panel)
+const allSubjects = [
+    "Mathematics", "English Language", "Biology", "Chemistry", "Physics", 
+    "Further Mathematics", "Agricultural Science", "Economics", "Geography", 
+    "Government", "Civic Education", "Literature-in-English", "History", 
+    "CRS", "IRS", "Financial Accounting", "Commerce", "Computer/Data Processing",
+    "Basic Science", "Basic Tech", "Social Studies", "Business Studies", 
+    "Home Economics", "PHE", "French", "Yoruba", "CCA"
+];
+
 function switchLogin(type) {
     const sForm = document.getElementById('student-form');
     const aForm = document.getElementById('admin-form');
@@ -49,66 +59,73 @@ async function loginStudent() {
         return;
     }
 
-    console.log("Attempting login for:", inputReg);
-
+    // Check Live DB first
     try {
-        // 1. TRY LIVE DATABASE FIRST
         const response = await fetch('https://zinat-cbt-website.onrender.com/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            cache: 'no-cache', 
             body: JSON.stringify({ reg: inputReg })
         });
-
         const data = await response.json();
-        console.log("Server Response:", data);
 
         if (data.success) {
-            const student = data.student;
-            const photoId = student.reg.replace(/\//g, "-");
-
-            localStorage.setItem('current_student', JSON.stringify({
-                reg: student.reg,
-                name: student.name,
-                score: student.score || 0,
-                status: student.status || "Pending",
-                photoFileName: photoId
-            }));
-            
-            console.log("Redirecting to index.html...");
-            window.location.replace("index.html"); 
-            return; 
-        } else {
-            // NEW: If server says they already submitted (Status 403)
-            if (response.status === 403) {
-                alert(data.message);
-                return;
-            }
+            saveStudentAndShowSubjects(data.student);
+            return;
+        } else if (response.status === 403) {
+            alert(data.message);
+            return;
         }
-    } catch (error) {
-        console.error("Database connection error:", error);
-    }
+    } catch (error) { console.warn("Cloud login failed, checking fallback..."); }
 
-    // 2. FALLBACK: ONLY IF NOT IN DATABASE AND NOT BLOCKED BY SERVER
-    console.log("Checking local fallback list...");
+    // Fallback Check
     const foundLocal = authorizedStudents.find(s => s.reg === inputReg);
-
     if (foundLocal) {
-        const photoId = foundLocal.reg.replace(/\//g, "-");
-
-        localStorage.setItem('current_student', JSON.stringify({
-            reg: foundLocal.reg,
-            name: foundLocal.name,
-            score: 0,
-            status: "New",
-            photoFileName: photoId
-        }));
-        
-        console.log("Local student found. Redirecting...");
-        window.location.replace("index.html");
+        saveStudentAndShowSubjects(foundLocal);
     } else {
-        alert("Access Denied: Registration Number not found in our records.");
+        alert("Access Denied: Registration Number not found.");
     }
+}
+
+function saveStudentAndShowSubjects(student) {
+    const photoId = student.reg.replace(/\//g, "-");
+    
+    // Save student info but NOT the subject yet
+    localStorage.setItem('current_student', JSON.stringify({
+        reg: student.reg,
+        name: student.name,
+        photoFileName: photoId
+    }));
+
+    // Clear old exam data to prevent "auto-logout" errors
+    localStorage.removeItem('zinat_time_left');
+    localStorage.removeItem('selected_subject');
+
+    showSubjectModal();
+}
+
+function showSubjectModal() {
+    const modal = document.getElementById('subject-modal');
+    const container = document.getElementById('subject-list-container');
+    
+    modal.style.display = 'flex';
+    container.innerHTML = ''; // Clear loading text
+
+    allSubjects.forEach(subject => {
+        const card = document.createElement('div');
+        card.className = 'subject-card';
+        card.innerText = subject;
+        card.onclick = () => startExam(subject);
+        container.appendChild(card);
+    });
+}
+
+function startExam(subject) {
+    localStorage.setItem('selected_subject', subject);
+    window.location.href = "index.html"; 
+}
+
+function closeSubjectModal() {
+    document.getElementById('subject-modal').style.display = 'none';
 }
 
 function loginAdmin() {
@@ -119,12 +136,5 @@ function loginAdmin() {
         window.location.href = "admin.html";
     } else {
         alert("Invalid Admin Credentials!");
-    }
-}
-
-function logout() {
-    if (confirm("Are you sure you want to logout?")) {
-        localStorage.removeItem('current_student');
-        window.location.href = "login.html";
     }
 }

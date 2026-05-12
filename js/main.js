@@ -30,7 +30,6 @@ async function initExam() {
     }
 
     try {
-        // Prevent double-taking the same subject
         const checkRes = await fetch('https://zinat-cbt-website.onrender.com/api/results');
         const checkData = await checkRes.json();
         
@@ -57,12 +56,10 @@ async function initExam() {
             examSettings = settingsData.settings;
         }
 
-        // FETCH ALL QUESTIONS - Then filter by subject locally for reliability
         const qResponse = await fetch(`https://zinat-cbt-website.onrender.com/api/questions`);
         const qData = await qResponse.json();
 
         if (qData.success) {
-            // FILTER logic: Match the subject exactly as stored in the Admin Panel
             const filteredQuestions = qData.questions.filter(q => q.subject === selectedSubject);
 
             if (filteredQuestions.length > 0) {
@@ -78,13 +75,13 @@ async function initExam() {
                     correct: q.correctAnswer
                 }));
             } else {
-                document.getElementById('question-text').innerText = `No questions have been uploaded for ${selectedSubject} yet. Please notify the invigilator.`;
+                document.getElementById('question-text').innerText = `No questions uploaded for ${selectedSubject} yet.`;
                 return;
             }
         }
     } catch (error) {
         console.error("Cloud Fetch Error:", error);
-        document.getElementById('question-text').innerText = "Connection Error. Please check your internet and try again.";
+        document.getElementById('question-text').innerText = "Connection Error. Please check your internet.";
         return;
     }
 
@@ -96,24 +93,30 @@ async function initExam() {
     generateQuestionMap();
     renderQuestion(currentQuestionIndex);
     startTimer();
-    enableSecurity(); 
+    enableSecurity(); // Fixed version below
 }
 
 /**
- * ANTI-MALPRACTICE SECURITY
+ * ANTI-MALPRACTICE SECURITY (Fixed Grace Period)
  */
 function enableSecurity() {
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden' && !isSubmitting) {
-            forceSubmit("Tab switching detected.");
-        }
-    });
+    // Wait 5 seconds after exam starts before activating security
+    // This prevents "immediate logout" during page load/render
+    setTimeout(() => {
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden' && !isSubmitting) {
+                forceSubmit("Tab switching detected.");
+            }
+        });
 
-    window.addEventListener('blur', () => {
-        if (!isSubmitting) {
-            forceSubmit("Window focus loss detected.");
-        }
-    });
+        window.addEventListener('blur', () => {
+            // Check if the page is actually hidden to avoid false triggers from popups
+            if (!isSubmitting && document.visibilityState === 'hidden') {
+                forceSubmit("Window focus loss detected.");
+            }
+        });
+        console.log("Exam Security System Armed.");
+    }, 5000); 
 }
 
 function forceSubmit(reason) {
@@ -218,7 +221,7 @@ function startTimer() {
  * SUBMIT EXAM 
  */
 async function submitExam() {
-    if (isSubmitting && timeLeft > 0 && !isSubmitting) return; 
+    if (isSubmitting && timeLeft > 0) return; 
     isSubmitting = true;
 
     let score = 0;
@@ -262,8 +265,8 @@ async function submitExam() {
             window.location.replace("login.html");
         }
     } catch (err) {
-        console.error("Submission failed, retrying locally...");
-        alert("Connection lost. Your result was saved locally. Please tell the invigilator.");
+        console.error("Submission failed.");
+        alert("Connection lost. Result saved locally.");
         window.location.replace("login.html");
     }
 }
@@ -299,6 +302,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const submitBtn = document.getElementById('submit-btn');
     if (submitBtn) submitBtn.onclick = () => {
-        if(confirm("Submit your exam now? You cannot go back.")) submitExam();
+        if(confirm("Submit your exam now?")) submitExam();
     };
 });
