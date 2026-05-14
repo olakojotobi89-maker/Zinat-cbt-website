@@ -59,7 +59,6 @@ async function loginStudent() {
         return;
     }
 
-    // Check Live DB first
     try {
         const response = await fetch('https://zinat-cbt-website.onrender.com/api/login', {
             method: 'POST',
@@ -77,7 +76,6 @@ async function loginStudent() {
         }
     } catch (error) { console.warn("Cloud login failed, checking fallback..."); }
 
-    // Fallback Check
     const foundLocal = authorizedStudents.find(s => s.reg === inputReg);
     if (foundLocal) {
         saveStudentAndShowSubjects(foundLocal);
@@ -89,14 +87,12 @@ async function loginStudent() {
 function saveStudentAndShowSubjects(student) {
     const photoId = student.reg.replace(/\//g, "-");
     
-    // Save student info but NOT the subject yet
     localStorage.setItem('current_student', JSON.stringify({
         reg: student.reg,
         name: student.name,
         photoFileName: photoId
     }));
 
-    // Clear old exam data to prevent "auto-logout" errors
     localStorage.removeItem('zinat_time_left');
     localStorage.removeItem('selected_subject');
 
@@ -108,7 +104,7 @@ function showSubjectModal() {
     const container = document.getElementById('subject-list-container');
     
     modal.style.display = 'flex';
-    container.innerHTML = ''; // Clear loading text
+    container.innerHTML = ''; 
 
     allSubjects.forEach(subject => {
         const card = document.createElement('div');
@@ -136,5 +132,15 @@ function loginAdmin() {
         window.location.href = "admin.html";
     } else {
         alert("Invalid Admin Credentials!");
+    }
+}
+
+// FIX: Added Logout Logic back in
+function logout() {
+    if (confirm("Are you sure you want to logout?")) {
+        localStorage.removeItem('current_student');
+        localStorage.removeItem('selected_subject');
+        localStorage.removeItem('zinat_time_left');
+        window.location.href = "login.html";
     }
 }

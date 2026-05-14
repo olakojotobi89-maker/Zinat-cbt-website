@@ -46,7 +46,7 @@ async function refreshData() {
         if (data.success) {
             questions = data.questions.map(q => ({
                 id: q._id,
-                subject: q.subject || "General", // NEW: Capture subject from cloud
+                subject: q.subject || "General", // Capture subject from cloud
                 text: q.question,
                 options: { A: q.options[0], B: q.options[1], C: q.options[2], D: q.options[3] },
                 correct: q.correctAnswer
@@ -67,7 +67,7 @@ async function refreshData() {
 
 // --- Question Management (CLOUD SYNC) ---
 async function saveNewQuestion() {
-    const subject = document.getElementById('q-subject').value; // NEW: Get subject
+    const subject = document.getElementById('q-subject').value; 
     const text = document.getElementById('q-text').value;
     const a = document.getElementById('q-opt-a').value;
     const b = document.getElementById('q-opt-b').value;
@@ -81,14 +81,14 @@ async function saveNewQuestion() {
     }
 
     const newQuestion = {
-        subject: subject, // NEW: Include subject
+        subject: subject, 
         question: text,
         options: [a, b, c, d],
         correctAnswer: correct
     };
 
     const serverReadyList = questions.map(q => ({
-        subject: q.subject, // NEW: Maintain subject in sync
+        subject: q.subject, 
         question: q.text,
         options: [q.options.A, q.options.B, q.options.C, q.options.D],
         correctAnswer: q.correct
@@ -125,7 +125,7 @@ function renderAdminQuestions() {
     list.innerHTML = questions.map((q, index) => `
         <tr>
             <td>${index + 1}</td>
-            <td style="font-weight:bold; color:var(--primary-color);">${q.subject}</td> <!-- NEW: Display Subject -->
+            <td style="font-weight:bold; color:var(--primary-color);">${q.subject}</td> 
             <td>${q.text}</td>
             <td>${q.correct}</td>
             <td>
@@ -138,7 +138,7 @@ function renderAdminQuestions() {
 async function deleteQuestion(id) {
     if(confirm("Delete this question from the cloud?")) {
         const remainingQuestions = questions.filter(q => q.id !== id).map(q => ({
-            subject: q.subject, // NEW: Maintain subject during delete
+            subject: q.subject, 
             question: q.text,
             options: [q.options.A, q.options.B, q.options.C, q.options.D],
             correctAnswer: q.correct
@@ -173,7 +173,7 @@ async function renderAdminResults() {
                 <tr>
                     <td>${r.reg}</td>
                     <td>${r.name}</td>
-                    <td style="font-weight:bold;">${r.subject || 'General'}</td> <!-- NEW: Display Student Subject -->
+                    <td style="font-weight:bold;">${r.subject || 'General'}</td> 
                     <td>${r.score}%</td>
                     <td>${r.status}</td>
                 </tr>
@@ -204,6 +204,38 @@ async function saveSettings() {
     }
 }
 
-function clearAllData() {
-    alert("Manual clearing of cloud results is disabled for safety. Please contact the DB admin to wipe records.");
+/**
+ * FIX: ENABLE CLOUD CLEAR DATA
+ */
+async function clearAllData() {
+    if (confirm("Are you sure? This will delete ALL student results from the cloud!")) {
+        const confirmPhrase = prompt("Type 'DELETE' to confirm wiping all results:");
+        
+        if (confirmPhrase === "DELETE") {
+            try {
+                // Point to your actual Render API delete route
+                const response = await fetch('https://zinat-cbt-website.onrender.com/api/results', {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert("All results have been cleared from the cloud.");
+                    renderAdminResults();
+                } else {
+                    alert("Cloud delete failed. Your server may not support this action.");
+                }
+            } catch (err) {
+                alert("Error connecting to server: " + err.message);
+            }
+        }
+    }
+}
+
+/**
+ * FIX: ADMIN LOGOUT
+ */
+function adminLogout() {
+    if (confirm("Logout from Admin Dashboard?")) {
+        window.location.href = "login.html";
+    }
 }

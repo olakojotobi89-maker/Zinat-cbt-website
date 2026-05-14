@@ -15,7 +15,7 @@
                 <h1>ZINAT <span>ADMIN PANEL</span></h1>
             </div>
         </div>
-        <button onclick="logout()" class="btn-flag" style="background: var(--danger-color); color: white;">Logout</button>
+        <button onclick="adminLogout()" class="btn-flag" style="background: var(--danger-color); color: white; cursor:pointer;">Logout</button>
     </header>
 
     <div class="admin-wrapper">
@@ -78,13 +78,12 @@
                     <button class="btn-nav btn-primary" onclick="saveSettings()">Save Configuration</button>
                     <hr style="margin:30px 0;">
                     <h3 style="color:red;">Danger Zone</h3>
-                    <button class="btn-flag" style="background:red; color:white;" onclick="clearAllData()">Delete Previous Exam Data</button>
+                    <button class="btn-flag" style="background:red; color:white; cursor:pointer;" onclick="clearAllData()">Delete Previous Exam Data</button>
                 </div>
             </section>
         </main>
     </div>
 
-    <!-- Question Management Modal -->
     <div id="question-modal" class="modal">
         <div class="modal-content">
             <h3>Add New Question</h3>
