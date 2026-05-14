@@ -22,16 +22,6 @@ const authorizedStudents = [
     { reg: "ZINAT/2026/20", name: "Odubella Moyosore" }
 ];
 
-// FULL SUBJECT LIST (Matches Admin Panel)
-const allSubjects = [
-    "Mathematics", "English Language", "Biology", "Chemistry", "Physics", 
-    "Further Mathematics", "Agricultural Science", "Economics", "Geography", 
-    "Government", "Civic Education", "Literature-in-English", "History", 
-    "CRS", "IRS", "Financial Accounting", "Commerce", "Computer/Data Processing",
-    "Basic Science", "Basic Tech", "Social Studies", "Business Studies", 
-    "Home Economics", "PHE", "French", "Yoruba", "CCA"
-];
-
 function switchLogin(type) {
     const sForm = document.getElementById('student-form');
     const aForm = document.getElementById('admin-form');
@@ -68,7 +58,7 @@ async function loginStudent() {
         const data = await response.json();
 
         if (data.success) {
-            saveStudentAndShowSubjects(data.student);
+            saveStudentAndRedirect(data.student);
             return;
         } else if (response.status === 403) {
             alert(data.message);
@@ -78,13 +68,13 @@ async function loginStudent() {
 
     const foundLocal = authorizedStudents.find(s => s.reg === inputReg);
     if (foundLocal) {
-        saveStudentAndShowSubjects(foundLocal);
+        saveStudentAndRedirect(foundLocal);
     } else {
         alert("Access Denied: Registration Number not found.");
     }
 }
 
-function saveStudentAndShowSubjects(student) {
+function saveStudentAndRedirect(student) {
     const photoId = student.reg.replace(/\//g, "-");
     
     localStorage.setItem('current_student', JSON.stringify({
@@ -93,35 +83,12 @@ function saveStudentAndShowSubjects(student) {
         photoFileName: photoId
     }));
 
+    // Clear old exam data for a fresh start
     localStorage.removeItem('zinat_time_left');
     localStorage.removeItem('selected_subject');
 
-    showSubjectModal();
-}
-
-function showSubjectModal() {
-    const modal = document.getElementById('subject-modal');
-    const container = document.getElementById('subject-list-container');
-    
-    modal.style.display = 'flex';
-    container.innerHTML = ''; 
-
-    allSubjects.forEach(subject => {
-        const card = document.createElement('div');
-        card.className = 'subject-card';
-        card.innerText = subject;
-        card.onclick = () => startExam(subject);
-        container.appendChild(card);
-    });
-}
-
-function startExam(subject) {
-    localStorage.setItem('selected_subject', subject);
+    // Redirect straight to index.html where the other subject selection is
     window.location.href = "index.html"; 
-}
-
-function closeSubjectModal() {
-    document.getElementById('subject-modal').style.display = 'none';
 }
 
 function loginAdmin() {
@@ -135,7 +102,6 @@ function loginAdmin() {
     }
 }
 
-// FIX: Added Logout Logic back in
 function logout() {
     if (confirm("Are you sure you want to logout?")) {
         localStorage.removeItem('current_student');
