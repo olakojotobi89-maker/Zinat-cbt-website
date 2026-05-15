@@ -86,12 +86,15 @@ async function saveNewQuestion() {
         correctAnswer: correct
     };
 
-    const serverReadyList = questions.map(q => ({
-        subject: q.subject, 
-        question: q.text,
-        options: [q.options.A, q.options.B, q.options.C, q.options.D],
-        correctAnswer: q.correct
-    }));
+    // Filter to only questions of the same subject to avoid overwriting other subjects
+    const serverReadyList = questions
+        .filter(q => q.subject === subject)
+        .map(q => ({
+            subject: q.subject, 
+            question: q.text,
+            options: [q.options.A, q.options.B, q.options.C, q.options.D],
+            correctAnswer: q.correct
+        }));
     
     serverReadyList.push(newQuestion);
 
@@ -99,7 +102,8 @@ async function saveNewQuestion() {
         const response = await fetch('https://zinat-cbt-website.onrender.com/api/questions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ questions: serverReadyList })
+            // ADDED: Sending 'subject' so backend categorizes correctly
+            body: JSON.stringify({ subject: subject, questions: serverReadyList })
         });
 
         if (response.ok) {
@@ -137,27 +141,30 @@ function renderAdminQuestions() {
                 <td>${q.text}</td>
                 <td><strong style="color:green;">${q.correct}</strong></td>
                 <td>
-                    <button onclick="deleteQuestion('${q.id}')" class="btn-flag" style="background:#ff4444; padding:5px 10px; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">Delete</button>
+                    <button onclick="deleteQuestion('${q.id}', '${q.subject}')" class="btn-flag" style="background:#ff4444; padding:5px 10px; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">Delete</button>
                 </td>
             </tr>
         `;
     }).join('');
 }
 
-async function deleteQuestion(id) {
+async function deleteQuestion(id, subject) {
     if(confirm("Are you sure you want to delete this question?")) {
-        const remainingQuestions = questions.filter(q => q.id !== id).map(q => ({
-            subject: q.subject, 
-            question: q.text,
-            options: [q.options.A, q.options.B, q.options.C, q.options.D],
-            correctAnswer: q.correct
-        }));
+        const remainingQuestions = questions
+            .filter(q => q.id !== id && q.subject === subject)
+            .map(q => ({
+                subject: q.subject, 
+                question: q.text,
+                options: [q.options.A, q.options.B, q.options.C, q.options.D],
+                correctAnswer: q.correct
+            }));
 
         try {
             const response = await fetch('https://zinat-cbt-website.onrender.com/api/questions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ questions: remainingQuestions })
+                // ADDED: Sending 'subject' so backend knows which set to update
+                body: JSON.stringify({ subject: subject, questions: remainingQuestions })
             });
             if (response.ok) refreshData();
         } catch (err) {
@@ -211,7 +218,6 @@ async function saveSettings() {
     }
 }
 
-// --- FIXED: Delete Exam Data Function ---
 async function clearAllData() {
     if (confirm("DANGER: This will wipe ALL student results!")) {
         const confirmPhrase = prompt("Type 'DELETE' to confirm:");
@@ -225,7 +231,6 @@ async function clearAllData() {
                 });
                 if (response.ok) {
                     alert("Results cleared successfully.");
-                    // Immediately refresh the UI
                     await renderAdminResults();
                 } else {
                     alert("Delete failed. Your server might not have the DELETE route configured.");
