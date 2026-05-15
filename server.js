@@ -9,7 +9,12 @@ require('dotenv').config();
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+
+// --- UPDATED CORS TO ALLOW DELETE ---
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'DELETE', 'OPTIONS']
+}));
 
 // --- SERVE STATIC FILES ---
 app.use(express.static(path.join(__dirname)));
@@ -177,6 +182,16 @@ app.get('/api/results', async (req, res) => {
     try {
         const results = await Result.find().sort({ date: -1 });
         res.json({ success: true, results: results });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- ADDED: DELETE ALL RESULTS ROUTE ---
+app.delete('/api/results', async (req, res) => {
+    try {
+        await Result.deleteMany({});
+        res.json({ success: true, message: "All results cleared from database!" });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
