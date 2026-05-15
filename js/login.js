@@ -83,12 +83,11 @@ function saveStudentAndRedirect(student) {
         photoFileName: photoId
     }));
 
-    // Clear old exam data for a fresh start
     localStorage.removeItem('zinat_time_left');
     localStorage.removeItem('selected_subject');
 
-    // Redirect straight to index.html where the other subject selection is
-    window.location.href = "index.html"; 
+    // REDIRECT TO THE CHOICE PAGE
+    window.location.href = "choice.html"; 
 }
 
 function loginAdmin() {

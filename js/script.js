@@ -32,7 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveBtn = document.getElementById('saveQuestionBtn');
     if(saveBtn) saveBtn.onclick = saveNewQuestion;
 
-    // Load everything from the Cloud on start
     refreshData();
 });
 
@@ -46,7 +45,7 @@ async function refreshData() {
         if (data.success) {
             questions = data.questions.map(q => ({
                 id: q._id,
-                subject: q.subject || "General", // Capture subject from cloud
+                subject: q.subject || "Unassigned", 
                 text: q.question,
                 options: { A: q.options[0], B: q.options[1], C: q.options[2], D: q.options[3] },
                 correct: q.correctAnswer
@@ -93,6 +92,7 @@ async function saveNewQuestion() {
         options: [q.options.A, q.options.B, q.options.C, q.options.D],
         correctAnswer: q.correct
     }));
+    
     serverReadyList.push(newQuestion);
 
     try {
@@ -103,10 +103,10 @@ async function saveNewQuestion() {
         });
 
         if (response.ok) {
-            alert("Question Saved to Cloud!");
+            alert(`Question added successfully to ${subject}!`);
             closeModal();
             refreshData(); 
-            // Reset fields
+            
             document.getElementById('q-text').value = "";
             document.getElementById('q-opt-a').value = "";
             document.getElementById('q-opt-b').value = "";
@@ -122,21 +122,30 @@ function renderAdminQuestions() {
     const list = document.getElementById('question-list');
     if (!list) return;
 
-    list.innerHTML = questions.map((q, index) => `
-        <tr>
-            <td>${index + 1}</td>
-            <td style="font-weight:bold; color:var(--primary-color);">${q.subject}</td> 
-            <td>${q.text}</td>
-            <td>${q.correct}</td>
-            <td>
-                <button onclick="deleteQuestion('${q.id}')" class="btn-flag" style="background:red; padding:5px 10px; color:white; border:none; border-radius:4px; cursor:pointer;">Delete</button>
-            </td>
-        </tr>
-    `).join('');
+    list.innerHTML = questions.map((q, index) => {
+        const isSSS = q.subject.includes("SSS");
+        const badgeColor = isSSS ? "#2c3e50" : "#6a1b9a";
+        
+        return `
+            <tr>
+                <td>${index + 1}</td>
+                <td>
+                    <span style="background:${badgeColor}; color:white; padding:2px 8px; border-radius:4px; font-size:0.8rem;">
+                        ${q.subject}
+                    </span>
+                </td> 
+                <td>${q.text}</td>
+                <td><strong style="color:green;">${q.correct}</strong></td>
+                <td>
+                    <button onclick="deleteQuestion('${q.id}')" class="btn-flag" style="background:#ff4444; padding:5px 10px; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">Delete</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
 async function deleteQuestion(id) {
-    if(confirm("Delete this question from the cloud?")) {
+    if(confirm("Are you sure you want to delete this question?")) {
         const remainingQuestions = questions.filter(q => q.id !== id).map(q => ({
             subject: q.subject, 
             question: q.text,
@@ -145,19 +154,18 @@ async function deleteQuestion(id) {
         }));
 
         try {
-            await fetch('https://zinat-cbt-website.onrender.com/api/questions', {
+            const response = await fetch('https://zinat-cbt-website.onrender.com/api/questions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ questions: remainingQuestions })
             });
-            refreshData();
+            if (response.ok) refreshData();
         } catch (err) {
             alert("Delete failed: " + err.message);
         }
     }
 }
 
-// --- Results & Settings (UPDATED FOR SUBJECTS) ---
 async function renderAdminResults() {
     const list = document.getElementById('result-list');
     if (!list) return;
@@ -173,16 +181,15 @@ async function renderAdminResults() {
                 <tr>
                     <td>${r.reg}</td>
                     <td>${r.name}</td>
-                    <td style="font-weight:bold;">${r.subject || 'General'}</td> 
-                    <td>${r.score}%</td>
-                    <td>${r.status}</td>
+                    <td style="font-weight:bold; color:#6a1b9a;">${r.subject}</td> 
+                    <td><strong style="font-size:1.1rem;">${r.score}%</strong></td>
+                    <td><span style="color:${r.status === 'PASSED' ? 'green' : 'red'}; font-weight:bold;">${r.status}</span></td>
                 </tr>
             `).join('');
         } else {
             list.innerHTML = "<tr><td colspan='5'>No results found in the cloud yet.</td></tr>";
         }
     } catch (err) {
-        console.error("Cloud Result Fetch Error:", err);
         list.innerHTML = "<tr><td colspan='5'>Error loading results from server.</td></tr>";
     }
 }
@@ -204,25 +211,24 @@ async function saveSettings() {
     }
 }
 
-/**
- * FIX: ENABLE CLOUD CLEAR DATA
- */
+// --- FIXED: Delete Exam Data Function ---
 async function clearAllData() {
-    if (confirm("Are you sure? This will delete ALL student results from the cloud!")) {
-        const confirmPhrase = prompt("Type 'DELETE' to confirm wiping all results:");
-        
+    if (confirm("DANGER: This will wipe ALL student results!")) {
+        const confirmPhrase = prompt("Type 'DELETE' to confirm:");
         if (confirmPhrase === "DELETE") {
             try {
-                // Point to your actual Render API delete route
                 const response = await fetch('https://zinat-cbt-website.onrender.com/api/results', {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 });
-
                 if (response.ok) {
-                    alert("All results have been cleared from the cloud.");
-                    renderAdminResults();
+                    alert("Results cleared successfully.");
+                    // Immediately refresh the UI
+                    await renderAdminResults();
                 } else {
-                    alert("Cloud delete failed. Your server may not support this action.");
+                    alert("Delete failed. Your server might not have the DELETE route configured.");
                 }
             } catch (err) {
                 alert("Error connecting to server: " + err.message);
@@ -231,9 +237,6 @@ async function clearAllData() {
     }
 }
 
-/**
- * FIX: ADMIN LOGOUT
- */
 function adminLogout() {
     if (confirm("Logout from Admin Dashboard?")) {
         window.location.href = "login.html";

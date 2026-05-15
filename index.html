@@ -20,7 +20,6 @@
             </div>
         </div>
 
-        <!-- Dynamic Student Profile Section -->
         <div class="profile-center">
             <div class="profile-ring">
                 <img id="student-photo" src="images/default-user.png" alt="Student Photo">
@@ -91,61 +90,66 @@
         </section>
     </main>
 
-    <!-- NEW: Subject Selection Modal -->
-    <div id="subject-modal" class="modal-overlay">
-        <div class="modal-content-subject">
-            <h2>Select Your Subject</h2>
-            <p>Please choose the exam you are taking today.</p>
-            <div class="subject-grid" id="subject-list">
-                <!-- Subjects will be injected here by main.js -->
-                <button class="subject-btn" onclick="startSubject('Mathematics')">Mathematics</button>
-                <button class="subject-btn" onclick="startSubject('English')">English Language</button>
-                <button class="subject-btn" onclick="startSubject('Biology')">Biology</button>
-                <button class="subject-btn" onclick="startSubject('Chemistry')">Chemistry</button>
-            </div>
-            <button class="btn-close-modal" onclick="logout()">Cancel / Exit</button>
-        </div>
-    </div>
-
     <script src="js/login.js"></script>
     <script src="js/main.js"></script>
     
     <script>
-        window.addEventListener('DOMContentLoaded', () => {
-            const studentData = JSON.parse(localStorage.getItem('current_student'));
-            
-            if (!studentData) {
-                window.location.href = 'login.html'; 
-            } else {
-                document.getElementById('display-name').innerText = studentData.name;
-                document.getElementById('display-reg').innerText = studentData.reg;
-                
-                const photoElement = document.getElementById('student-photo');
-                const nameLabel = document.getElementById('profile-name-display');
-                
-                nameLabel.innerText = studentData.name;
+        // --- SECURITY & MALPRACTICE WATCHDOG ---
+        let examSubmitted = false;
 
-                const photoPath = `image/student/${studentData.photoFileName}.jpg`;
-                photoElement.src = photoPath;
+        function autoSubmitMalpractice(reason) {
+            if (!examSubmitted) {
+                examSubmitted = true;
+                alert("MALPRACTICE DETECTED: " + reason + ". Your exam is being submitted automatically.");
+                if (typeof submitExam === "function") {
+                    submitExam();
+                } else {
+                    // Fallback if main.js isn't fully loaded
+                    localStorage.removeItem('selected_subject');
+                    window.location.href = 'login.html';
+                }
+            }
+        }
 
-                photoElement.onerror = function() {
-                    this.src = 'zzz-removebg-preview.png'; 
-                };
-
-                // Show the subject modal as soon as the page loads
-                document.getElementById('subject-modal').style.display = 'flex';
+        // 1. Detect switching tabs or minimizing browser
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                autoSubmitMalpractice("You left the exam page or minimized the browser");
             }
         });
 
-        // Function to close modal and update the UI
-        function startSubject(subject) {
-            document.getElementById('subject-modal').style.display = 'none';
-            document.getElementById('subject-name').innerText = subject;
-            // You can trigger your exam loading logic here
-            if (typeof loadQuestions === "function") {
-                loadQuestions(subject);
+        // 2. Detect swiping down notifications / clicking outside window
+        window.addEventListener('blur', () => {
+            autoSubmitMalpractice("Notification swipe or lost window focus detected");
+        });
+
+        // 3. Page Setup Logic
+        window.addEventListener('DOMContentLoaded', () => {
+            const studentData = JSON.parse(localStorage.getItem('current_student'));
+            const selectedSub = localStorage.getItem('selected_subject');
+            
+            if (!studentData || !selectedSub) {
+                window.location.href = 'login.html'; 
+                return;
             }
-        }
+
+            // Fill UI
+            document.getElementById('display-name').innerText = studentData.name;
+            document.getElementById('display-reg').innerText = studentData.reg;
+            document.getElementById('profile-name-display').innerText = studentData.name;
+            document.getElementById('subject-name').innerText = selectedSub;
+
+            const photoElement = document.getElementById('student-photo');
+            photoElement.src = `image/student/${studentData.photoFileName}.jpg`;
+            photoElement.onerror = function() { this.src = 'zzz-removebg-preview.png'; };
+
+            // Start Exam Logic from main.js
+            if (typeof initExam === "function") {
+                initExam();
+            } else if (typeof loadQuestions === "function") {
+                loadQuestions(selectedSub);
+            }
+        });
     </script>
 </body>
 </html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Subject | Zinat Schools</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        :root {
+            --zinat-purple: #6a1b9a;
+            --zinat-gold: #ffc107;
+        }
+        .choice-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #f4f7f6;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .choice-box {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 900px;
+            text-align: center;
+        }
+        .level-grid, .subject-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .card {
+            padding: 20px;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-weight: bold;
+            background: #fff;
+        }
+        .card:hover {
+            border-color: var(--zinat-purple);
+            background: #f3e5f5;
+            transform: translateY(-3px);
+        }
+        .card.selected {
+            background: var(--zinat-purple);
+            color: white;
+            border-color: var(--zinat-purple);
+        }
+        .hidden { display: none; }
+        .section-title { margin-top: 30px; color: var(--zinat-purple); border-bottom: 2px solid var(--zinat-gold); display: inline-block; padding-bottom: 5px;}
+        .back-btn { margin-top: 20px; cursor: pointer; color: #666; text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <div class="choice-container">
+        <div class="choice-box">
+            <img src="zzz-removebg-preview.png" alt="Logo" style="width: 80px;">
+            <h1 id="welcome-msg">Welcome, Student!</h1>
+            <p>Select your class level to see your subjects.</p>
+
+            <div id="level-selection">
+                <h3 class="section-title">Select Your Class</h3>
+                <div class="level-grid">
+                    <div class="card" onclick="showSubjects('JSS 1')">JSS 1</div>
+                    <div class="card" onclick="showSubjects('JSS 2')">JSS 2</div>
+                    <div class="card" onclick="showSubjects('JSS 3')">JSS 3</div>
+                    <div class="card" onclick="showSubjects('SSS 1')">SSS 1</div>
+                    <div class="card" onclick="showSubjects('SSS 2')">SSS 2</div>
+                    <div class="card" onclick="showSubjects('SSS 3')">SSS 3</div>
+                </div>
+            </div>
+
+            <div id="subject-selection" class="hidden">
+                <h3 class="section-title">Select <span id="current-level-display"></span> Subject</h3>
+                <div class="subject-grid" id="subject-list">
+                    </div>
+                <p class="back-btn" onclick="goBack()">← Back to Classes</p>
+            </div>
+
+            <button onclick="logout()" style="margin-top: 40px; color: red; background: none; border: none; cursor: pointer;">Logout</button>
+        </div>
+    </div>
+
+    <script src="js/login.js"></script>
+    <script>
+        // Data Structure for your requested categories
+        const subjectDatabase = {
+            "JSS 1": ["JSS1 Mathematics", "JSS1 English", "JSS1 Basic Science", "JSS1 Computer Studies", "JSS1 Social Studies", "JSS1 PHE"],
+            "JSS 2": ["JSS2 Mathematics", "JSS2 English", "JSS2 Basic Science", "JSS2 Computer Studies", "JSS2 Business Studies", "JSS2 Basic Tech"],
+            "JSS 3": ["JSS3 Mathematics", "JSS3 English", "JSS3 Basic Science", "JSS3 Computer Studies", "JSS3 Social Studies", "JSS3 CCA"],
+            "SSS 1": ["SSS1 Mathematics", "SSS1 English", "SSS1 Biology", "SSS1 Physics", "SSS1 Chemistry", "SSS1 Computer/Data Processing", "SSS1 Economics"],
+            "SSS 2": ["SSS2 Mathematics", "SSS2 English", "SSS2 Biology", "SSS2 Physics", "SSS2 Chemistry", "SSS2 Computer/Data Processing", "SSS2 Government"],
+            "SSS 3": ["SSS3 Mathematics", "SSS3 English", "SSS3 Biology", "SSS3 Physics", "SSS3 Chemistry", "SSS3 Computer/Data Processing", "SSS3 Civic Education"]
+        };
+
+        // Check login status
+        const student = JSON.parse(localStorage.getItem('current_student'));
+        if (!student) {
+            window.location.href = 'login.html';
+        } else {
+            document.getElementById('welcome-msg').innerText = `Welcome, ${student.name}!`;
+        }
+
+        function showSubjects(level) {
+            document.getElementById('level-selection').classList.add('hidden');
+            document.getElementById('subject-selection').classList.remove('hidden');
+            document.getElementById('current-level-display').innerText = level;
+
+            const listContainer = document.getElementById('subject-list');
+            listContainer.innerHTML = ''; // Clear old ones
+
+            subjectDatabase[level].forEach(subject => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerText = subject;
+                card.onclick = () => finishSelection(subject);
+                listContainer.appendChild(card);
+            });
+        }
+
+        function goBack() {
+            document.getElementById('level-selection').classList.remove('hidden');
+            document.getElementById('subject-selection').classList.add('hidden');
+        }
+
+        function finishSelection(fullSubjectName) {
+            // Save the specific subject (e.g., "JSS1 Mathematics")
+            localStorage.setItem('selected_subject', fullSubjectName);
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
