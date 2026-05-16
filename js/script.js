@@ -11,6 +11,8 @@ function showTab(tabId) {
 
     if (tabId === 'results') renderAdminResults();
     if (tabId === 'questions') renderAdminQuestions();
+    // ADDED: Load trash contents when switching to trash tab
+    if (tabId === 'trash') fetchAndRenderTrash();
 }
 
 // --- Modal Functions ---
@@ -55,7 +57,7 @@ async function refreshData() {
         
         const setRes = await fetch('https://zinat-cbt-website.onrender.com/api/settings');
         const setData = await setRes.json();
-        if (setData.success) {
+        if (setData.success && setData.settings) {
             document.getElementById('set-title').value = setData.settings.title;
             document.getElementById('set-duration').value = setData.settings.duration;
         }
@@ -86,7 +88,6 @@ async function saveNewQuestion() {
         correctAnswer: correct
     };
 
-    // Filter to only questions of the same subject to avoid overwriting other subjects
     const serverReadyList = questions
         .filter(q => q.subject === subject)
         .map(q => ({
@@ -102,7 +103,6 @@ async function saveNewQuestion() {
         const response = await fetch('https://zinat-cbt-website.onrender.com/api/questions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            // ADDED: Sending 'subject' so backend categorizes correctly
             body: JSON.stringify({ subject: subject, questions: serverReadyList })
         });
 
@@ -163,7 +163,6 @@ async function deleteQuestion(id, subject) {
             const response = await fetch('https://zinat-cbt-website.onrender.com/api/questions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // ADDED: Sending 'subject' so backend knows which set to update
                 body: JSON.stringify({ subject: subject, questions: remainingQuestions })
             });
             if (response.ok) refreshData();
@@ -225,18 +224,156 @@ async function clearAllData() {
             try {
                 const response = await fetch('https://zinat-cbt-website.onrender.com/api/results', {
                     method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                    headers: { 'Content-Type': 'application/json' }
                 });
                 if (response.ok) {
-                    alert("Results cleared successfully.");
+                    alert("Results moved to Trash Bin successfully.");
                     await renderAdminResults();
                 } else {
-                    alert("Delete failed. Your server might not have the DELETE route configured.");
+                    alert("Delete failed.");
                 }
             } catch (err) {
                 alert("Error connecting to server: " + err.message);
+            }
+        }
+    }
+}
+
+// --- NEW FEATURES: CONTROL HUB & TRASH LIFECYCLE ---
+
+// 1. System Nuke: Soft delete questions, results, and config settings profile data instantly
+async function nukeAllSystemData() {
+    if (confirm("🚨 WARNING: You are about to wipe ALL questions, student performance logs, and settings parameters from live view!")) {
+        const passwordCheck = prompt("Type 'NUKE SYSTEM' to authorize complete archival profile reset:");
+        if (passwordCheck === "NUKE SYSTEM") {
+            try {
+                const response = await fetch('https://zinat-cbt-website.onrender.com/api/danger/nuke-all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const resData = await response.json();
+                if (resData.success) {
+                    alert(resData.message);
+                    // Clear out memory array cache parameters and refresh views
+                    questions = [];
+                    document.getElementById('set-title').value = "";
+                    document.getElementById('set-duration').value = "";
+                    await refreshData();
+                } else {
+                    alert("Nuke command denied by server profile routing layout.");
+                }
+            } catch (err) {
+                alert("Connection disruption error: " + err.message);
+            }
+        }
+    }
+}
+
+// 2. Fetch and render items inside the recovery hub UI dashboard warehouse interface
+async function fetchAndRenderTrash() {
+    const trashTableBody = document.getElementById('trash-list');
+    if (!trashTableBody) return;
+
+    trashTableBody.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:15px;'>Reading cloud trash backup vaults... ⏳</td></tr>";
+
+    try {
+        const response = await fetch('https://zinat-cbt-website.onrender.com/api/trash');
+        const resData = await response.json();
+
+        if (resData.success && resData.trash.length > 0) {
+            trashTableBody.innerHTML = resData.trash.map(item => {
+                let infoDescription = "";
+                let itemTypeBadgeColor = "#777";
+
+                if (item.type === 'question') {
+                    itemTypeBadgeColor = "#2c3e50";
+                    infoDescription = `<strong>[${item.data.subject}]</strong> ${item.data.question.substring(0, 60)}...`;
+                } else if (item.type === 'result') {
+                    itemTypeBadgeColor = "#6a1b9a";
+                    infoDescription = `Student: <strong>${item.data.name} (${item.data.reg})</strong> scored ${item.data.score}% in ${item.data.subject || 'Exam'}`;
+                } else if (item.type === 'settings') {
+                    itemTypeBadgeColor = "#d63031";
+                    infoDescription = `System profile configurations reset: "${item.data.title}" (${item.data.duration} mins)`;
+                }
+
+                const deletionTimestamp = new Date(item.deletedAt).toLocaleString();
+
+                return `
+                    <tr>
+                        <td>
+                            <span style="background:${itemTypeBadgeColor}; color:white; padding:4px 8px; border-radius:4px; font-size:0.75rem; text-transform:uppercase; font-weight:bold;">
+                                ${item.type}
+                            </span>
+                        </td>
+                        <td style="font-size:0.9rem; max-width:400px; word-wrap:break-word;">${infoDescription}</td>
+                        <td style="font-size:0.85rem; color:#555;">${deletionTimestamp}</td>
+                        <td style="text-align:center;">
+                            <div style="display:flex; gap:8px; justify-content:center;">
+                                <button onclick="restoreTrashItem('${item._id}')" style="background:#2ecc71; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:0.8rem; font-weight:bold;">♻️ Restore</button>
+                                <button onclick="permanentlyEraseTrashItem('${item._id}')" style="background:#ff4444; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:0.8rem; font-weight:bold;">❌ Purge</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } else {
+            trashTableBody.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:30px; color:#777; font-weight:bold;'>🎉 Trash is empty! No records found.</td></tr>";
+        }
+    } catch (err) {
+        trashTableBody.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:15px; color:red;'>Failed to load trash archives: " + err.message + "</td></tr>";
+    }
+}
+
+// 3. Restore an item cleanly back to active status view
+async function restoreTrashItem(id) {
+    try {
+        const response = await fetch(`https://zinat-cbt-website.onrender.com/api/trash/restore/${id}`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+        if (data.success) {
+            alert("Data item successfully restored to active arrays!");
+            await fetchAndRenderTrash();
+            await refreshData();
+        }
+    } catch (err) {
+        alert("Restore operation mapping fault: " + err.message);
+    }
+}
+
+// 4. Erase an individual resource item cleanly from primary record context data structures completely
+async function permanentlyEraseTrashItem(id) {
+    if (confirm("Are you absolutely certain you want to delete this specific data component forever? This bypasses storage backups.")) {
+        try {
+            const response = await fetch(`https://zinat-cbt-website.onrender.com/api/trash/permanent/${id}`, {
+                method: 'DELETE'
+            });
+            const data = await response.json();
+            if (data.success) {
+                await fetchAndRenderTrash();
+            }
+        } catch (err) {
+            alert("Permanent purge connection fault structural layout: " + err.message);
+        }
+    }
+}
+
+// 5. Purge entire backup trash database profiles at once
+async function purgeTrashBinPermanently() {
+    if (confirm("💥 CRITICAL CRASH RISK: You are about to clear the entire Trash Bin archive! Nothing inside here can EVER be recovered again!")) {
+        const doubleAuthCheck = prompt("Type 'WIPE TRASH FOREVER' to empty the entire trash database:");
+        if (doubleAuthCheck === "WIPE TRASH FOREVER") {
+            try {
+                const response = await fetch('https://zinat-cbt-website.onrender.com/api/trash/purge-all', {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert("Trash repository storage entirely cleared out.");
+                    await fetchAndRenderTrash();
+                }
+            } catch (err) {
+                alert("Bulk purge pipeline command failure state: " + err.message);
             }
         }
     }

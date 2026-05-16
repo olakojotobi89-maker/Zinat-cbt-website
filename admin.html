@@ -24,6 +24,7 @@
                 <li id="li-questions" class="active" onclick="showTab('questions')">Manage Questions</li>
                 <li id="li-results" onclick="showTab('results')">Student Results</li>
                 <li id="li-settings" onclick="showTab('settings')">Exam Settings</li>
+                <li id="li-trash" onclick="showTab('trash')" style="border-left: 4px solid #ff9800; font-weight: bold;">🗑️ Trash Bin</li>
             </ul>
         </aside>
 
@@ -76,10 +77,39 @@
                         <input type="number" id="set-duration" style="width:100%; padding:10px;" value="120">
                     </div>
                     <button class="btn-nav btn-primary" onclick="saveSettings()">Save Configuration</button>
+                    
                     <hr style="margin:30px 0;">
+                    
                     <h3 style="color:red;">Danger Zone</h3>
-                    <button class="btn-flag" style="background:red; color:white; cursor:pointer;" onclick="clearAllData()">Delete Previous Exam Data</button>
+                    <div style="display:flex; flex-wrap:wrap; gap:15px; margin-top:15px;">
+                        <button class="btn-flag" style="background:#ff4444; color:white; cursor:pointer; padding:12px 20px;" onclick="clearAllData()">Delete Previous Exam Data</button>
+                        <button class="btn-flag" style="background:#8b0000; color:white; font-weight:bold; cursor:pointer; padding:12px 20px; border:2px dashed #ff0000;" onclick="nukeAllSystemData()">💥 Master Reset (Nuke Everything)</button>
+                    </div>
                 </div>
+            </section>
+
+            <section id="tab-trash" class="tab-content">
+                <div class="header-flex" style="display:flex; justify-content: space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <h2>Data Trash Bin</h2>
+                        <p style="color:#666; font-size:0.9rem; margin-top:2px;">View deleted information records. You can restore items or drop them permanently.</p>
+                    </div>
+                    <button class="btn-flag" style="background:#333; color:white; border:1px solid #ff4444; cursor:pointer; padding:10px 15px;" onclick="purgeTrashBinPermanently()">⚠️ Empty Trash Bin</button>
+                </div>
+
+                <table class="admin-table" style="margin-top:20px;">
+                    <thead>
+                        <tr>
+                            <th>Data Type</th>
+                            <th>Description Info Summary</th>
+                            <th>Date Moved</th>
+                            <th style="text-align:center;">Actions Hub</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trash-list">
+                        <tr><td colspan="4" style="text-align:center; padding:20px; color:#666;">Loading recovery warehouse contents...</td></tr>
+                    </tbody>
+                </table>
             </section>
         </main>
     </div>
