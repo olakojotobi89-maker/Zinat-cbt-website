@@ -1,5 +1,6 @@
 // --- Core Data ---
 let questions = []; 
+let allSubjectSettings = []; // Caches current custom timing profiles locally
 
 // --- Tab Switching ---
 function showTab(tabId) {
@@ -11,8 +12,8 @@ function showTab(tabId) {
 
     if (tabId === 'results') renderAdminResults();
     if (tabId === 'questions') renderAdminQuestions();
-    // ADDED: Load trash contents when switching to trash tab
     if (tabId === 'trash') fetchAndRenderTrash();
+    if (tabId === 'settings') loadSettingsTabSummary();
 }
 
 // --- Modal Functions ---
@@ -55,12 +56,8 @@ async function refreshData() {
             renderAdminQuestions();
         }
         
-        const setRes = await fetch('https://zinat-cbt-website.onrender.com/api/settings');
-        const setData = await setRes.json();
-        if (setData.success && setData.settings) {
-            document.getElementById('set-title').value = setData.settings.title;
-            document.getElementById('set-duration').value = setData.settings.duration;
-        }
+        // Quietly pull configuration layouts into the background matrix cache
+        await fetchAllSubjectSettings();
     } catch (err) {
         console.error("Error loading cloud data:", err);
     }
@@ -160,12 +157,14 @@ async function deleteQuestion(id, subject) {
             }));
 
         try {
-            const response = await fetch('https://zinat-cbt-website.onrender.com/api/questions', {
+            // Added mobile cache-buster query tag
+            const response = await fetch(`https://zinat-cbt-website.onrender.com/api/questions?t=${Date.now()}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ subject: subject, questions: remainingQuestions })
             });
-            if (response.ok) refreshData();
+            // Enforced asynchronous verification structure block for mobile delays
+            if (response.ok) await refreshData();
         } catch (err) {
             alert("Delete failed: " + err.message);
         }
@@ -200,20 +199,75 @@ async function renderAdminResults() {
     }
 }
 
+// --- UPDATED EXAM SETTINGS LOGIC WITH PROFILE TARGETING ---
+
+async function fetchAllSubjectSettings() {
+    try {
+        const response = await fetch('https://zinat-cbt-website.onrender.com/api/settings');
+        const data = await response.json();
+        if (data.success && data.allSettings) {
+            allSubjectSettings = data.allSettings;
+        }
+    } catch (err) {
+        console.error("Fault downloading global subject configs map:", err);
+    }
+}
+
+function loadSettingsTabSummary() {
+    renderTimingGridTable();
+    loadSelectedSubjectDuration();
+}
+
+// Triggered when changing the Settings dropdown list target
+function loadSelectedSubjectDuration() {
+    const currentSelectedSubject = document.getElementById('set-subject-target').value;
+    const match = allSubjectSettings.find(s => s.subject === currentSelectedSubject);
+    
+    // Default fallback to 60 minutes if nothing has been uniquely set yet
+    document.getElementById('set-duration').value = match ? match.duration : 60;
+}
+
+function renderTimingGridTable() {
+    const gridBody = document.getElementById('timing-grid-list');
+    if (!gridBody) return;
+
+    if (allSubjectSettings.length === 0) {
+        gridBody.innerHTML = `<tr><td colspan="2" style="text-align:center; color:#888; padding:12px;">No custom configurations parsed yet.</td></tr>`;
+        return;
+    }
+
+    gridBody.innerHTML = allSubjectSettings.map(config => `
+        <tr>
+            <td style="font-weight:bold; color:#2c3e50;">${config.subject}</td>
+            <td><span style="background:#e1bee7; color:#4a148c; padding:3px 10px; border-radius:12px; font-weight:bold; font-size:0.85rem;">${config.duration} Minutes</span></td>
+        </tr>
+    `).join('');
+}
+
 async function saveSettings() {
-    const title = document.getElementById('set-title').value;
+    const subject = document.getElementById('set-subject-target').value;
     const duration = document.getElementById('set-duration').value;
-    const passMark = 40; 
+
+    if (!duration || Number(duration) <= 0) {
+        alert("Please set a valid duration time limit!");
+        return;
+    }
 
     try {
         const response = await fetch('https://zinat-cbt-website.onrender.com/api/settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, duration, passMark })
+            body: JSON.stringify({ subject, duration })
         });
-        if (response.ok) alert("Global settings updated!");
+        
+        if (response.ok) {
+            alert(`Timing configuration updated for ${subject}!`);
+            // Refresh local map structures and update rendering panels cleanly
+            await fetchAllSubjectSettings();
+            renderTimingGridTable();
+        }
     } catch (err) {
-        alert("Failed to sync settings.");
+        alert("Failed to sync structural configuration layout parameters.");
     }
 }
 
@@ -222,9 +276,11 @@ async function clearAllData() {
         const confirmPhrase = prompt("Type 'DELETE' to confirm:");
         if (confirmPhrase === "DELETE") {
             try {
-                const response = await fetch('https://zinat-cbt-website.onrender.com/api/results', {
+                // Added mobile cache-buster query tag and explicit empty object validation body
+                const response = await fetch(`https://zinat-cbt-website.onrender.com/api/results?t=${Date.now()}`, {
                     method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
                 });
                 if (response.ok) {
                     alert("Results moved to Trash Bin successfully.");
@@ -239,9 +295,9 @@ async function clearAllData() {
     }
 }
 
-// --- NEW FEATURES: CONTROL HUB & TRASH LIFECYCLE ---
+// --- CONTROL HUB & TRASH LIFECYCLE ---
 
-// 1. System Nuke: Soft delete questions, results, and config settings profile data instantly
+// 1. System Nuke
 async function nukeAllSystemData() {
     if (confirm("🚨 WARNING: You are about to wipe ALL questions, student performance logs, and settings parameters from live view!")) {
         const passwordCheck = prompt("Type 'NUKE SYSTEM' to authorize complete archival profile reset:");
@@ -254,11 +310,11 @@ async function nukeAllSystemData() {
                 const resData = await response.json();
                 if (resData.success) {
                     alert(resData.message);
-                    // Clear out memory array cache parameters and refresh views
                     questions = [];
-                    document.getElementById('set-title').value = "";
-                    document.getElementById('set-duration').value = "";
+                    allSubjectSettings = [];
+                    document.getElementById('set-duration').value = 60;
                     await refreshData();
+                    renderTimingGridTable();
                 } else {
                     alert("Nuke command denied by server profile routing layout.");
                 }
@@ -269,7 +325,7 @@ async function nukeAllSystemData() {
     }
 }
 
-// 2. Fetch and render items inside the recovery hub UI dashboard warehouse interface
+// 2. Fetch and render items inside the recovery hub UI dashboard
 async function fetchAndRenderTrash() {
     const trashTableBody = document.getElementById('trash-list');
     if (!trashTableBody) return;
@@ -293,7 +349,7 @@ async function fetchAndRenderTrash() {
                     infoDescription = `Student: <strong>${item.data.name} (${item.data.reg})</strong> scored ${item.data.score}% in ${item.data.subject || 'Exam'}`;
                 } else if (item.type === 'settings') {
                     itemTypeBadgeColor = "#d63031";
-                    infoDescription = `System profile configurations reset: "${item.data.title}" (${item.data.duration} mins)`;
+                    infoDescription = `Dynamic configuration profile dropped: <strong>${item.data.subject}</strong> allocated at (${item.data.duration} mins)`;
                 }
 
                 const deletionTimestamp = new Date(item.deletedAt).toLocaleString();
@@ -324,7 +380,7 @@ async function fetchAndRenderTrash() {
     }
 }
 
-// 3. Restore an item cleanly back to active status view
+// 3. Restore an item from Trash
 async function restoreTrashItem(id) {
     try {
         const response = await fetch(`https://zinat-cbt-website.onrender.com/api/trash/restore/${id}`, {
@@ -335,18 +391,25 @@ async function restoreTrashItem(id) {
             alert("Data item successfully restored to active arrays!");
             await fetchAndRenderTrash();
             await refreshData();
+            // If the settings tab grid is currently pulled up, instantly refresh its table views
+            if (document.getElementById('tab-settings').classList.contains('active')) {
+                renderTimingGridTable();
+            }
         }
     } catch (err) {
         alert("Restore operation mapping fault: " + err.message);
     }
 }
 
-// 4. Erase an individual resource item cleanly from primary record context data structures completely
+// 4. Erase an individual resource item cleanly forever
 async function permanentlyEraseTrashItem(id) {
     if (confirm("Are you absolutely certain you want to delete this specific data component forever? This bypasses storage backups.")) {
         try {
-            const response = await fetch(`https://zinat-cbt-website.onrender.com/api/trash/permanent/${id}`, {
-                method: 'DELETE'
+            // Added mobile cache-buster query tag and explicit empty object validation body
+            const response = await fetch(`https://zinat-cbt-website.onrender.com/api/trash/permanent/${id}?t=${Date.now()}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
             });
             const data = await response.json();
             if (data.success) {
@@ -358,14 +421,17 @@ async function permanentlyEraseTrashItem(id) {
     }
 }
 
-// 5. Purge entire backup trash database profiles at once
+// 5. Purge entire backup trash database
 async function purgeTrashBinPermanently() {
     if (confirm("💥 CRITICAL CRASH RISK: You are about to clear the entire Trash Bin archive! Nothing inside here can EVER be recovered again!")) {
         const doubleAuthCheck = prompt("Type 'WIPE TRASH FOREVER' to empty the entire trash database:");
         if (doubleAuthCheck === "WIPE TRASH FOREVER") {
             try {
-                const response = await fetch('https://zinat-cbt-website.onrender.com/api/trash/purge-all', {
-                    method: 'DELETE'
+                // Added mobile cache-buster query tag and explicit empty object validation body
+                const response = await fetch(`https://zinat-cbt-website.onrender.com/api/trash/purge-all?t=${Date.now()}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
                 });
                 const data = await response.json();
                 if (data.success) {

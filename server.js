@@ -46,13 +46,13 @@ const QuestionSchema = new mongoose.Schema({
 });
 const Question = mongoose.model('Question', QuestionSchema);
 
-// --- SETTINGS DATA MODEL ---
-const SettingsSchema = new mongoose.Schema({
-    title: { type: String, default: "Zinat Entrance Exam" },
-    duration: { type: Number, default: 2 },
+// --- NEW SUBJECT-SPECIFIC TIMING MODEL ---
+const SubjectSettingsSchema = new mongoose.Schema({
+    subject: { type: String, required: true, unique: true }, // Keyed to specific class/subject
+    duration: { type: Number, default: 60 },
     passMark: { type: Number, default: 40 }
 });
-const Settings = mongoose.model('Settings', SettingsSchema);
+const SubjectSettings = mongoose.model('SubjectSettings', SubjectSettingsSchema);
 
 // --- RESULT DATA MODEL (FOR STUDENT SUBMISSIONS) ---
 const ResultSchema = new mongoose.Schema({
@@ -65,7 +65,7 @@ const ResultSchema = new mongoose.Schema({
 });
 const Result = mongoose.model('Result', ResultSchema);
 
-// --- NEW: TRASH BIN DATA MODEL ---
+// --- TRASH BIN DATA MODEL ---
 const TrashSchema = new mongoose.Schema({
     type: { type: String, required: true }, // 'question', 'result', or 'settings'
     originalId: mongoose.Schema.Types.ObjectId,
@@ -79,7 +79,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'login.html'));
 });
 
-// --- NEW: FETCH AVAILABLE SUBJECTS ---
+// --- FETCH AVAILABLE SUBJECTS ---
 app.get('/api/subjects', async (req, res) => {
     try {
         const subjects = await Question.distinct('subject');
@@ -172,12 +172,18 @@ app.delete('/api/questions', async (req, res) => {
     }
 });
 
-// --- SETTINGS ROUTES ---
+// --- UPDATED DYNAMIC TIMING SETTINGS ROUTES ---
 app.post('/api/settings', async (req, res) => {
     try {
-        const { title, duration, passMark } = req.body;
-        await Settings.findOneAndUpdate({}, { title, duration, passMark }, { upsert: true, new: true });
-        res.json({ success: true, message: "Exam settings updated!" });
+        const { subject, duration } = req.body;
+        if (!subject) return res.status(400).json({ success: false, message: "Subject identifier missing." });
+
+        await SubjectSettings.findOneAndUpdate(
+            { subject: subject }, 
+            { duration: Number(duration), passMark: 40 }, 
+            { upsert: true, new: true }
+        );
+        res.json({ success: true, message: `Exam duration for ${subject} updated successfully!` });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -185,8 +191,15 @@ app.post('/api/settings', async (req, res) => {
 
 app.get('/api/settings', async (req, res) => {
     try {
-        const settings = await Settings.findOne();
-        res.json({ success: true, settings: settings || { title: "Zinat Entrance Exam", duration: 2, passMark: 40 } });
+        const { subject } = req.query;
+        // If a specific subject is requested, return its precise timing configuration
+        if (subject) {
+            const config = await SubjectSettings.findOne({ subject: subject });
+            return res.json({ success: true, settings: config || { subject, duration: 60, passMark: 40 } });
+        }
+        // Otherwise, fetch all saved configurations to render the tracking table grid
+        const allConfigs = await SubjectSettings.find({});
+        res.json({ success: true, allSettings: allConfigs });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -230,7 +243,7 @@ app.delete('/api/results', async (req, res) => {
     }
 });
 
-// --- NEW: CONTROL HUB ROUTES (TRASH & MASTER NUKE) ---
+// --- CONTROL HUB ROUTES (TRASH & MASTER NUKE) ---
 
 // 1. Fetch all items currently in the trash bin
 app.get('/api/trash', async (req, res) => {
@@ -247,7 +260,7 @@ app.post('/api/danger/nuke-all', async (req, res) => {
     try {
         const allQuestions = await Question.find({});
         const allResults = await Result.find({});
-        const currentSettings = await Settings.findOne({});
+        const allConfigs = await SubjectSettings.find({});
         
         let trashPayload = [];
 
@@ -261,17 +274,17 @@ app.post('/api/danger/nuke-all', async (req, res) => {
                 type: 'result', originalId: r._id, data: { reg: r.reg, name: r.name, subject: r.subject, score: r.score, status: r.status, date: r.date }
             }));
         }
-        if (currentSettings) {
-            trashPayload.push({
-                type: 'settings', originalId: currentSettings._id, data: { title: currentSettings.title, duration: currentSettings.duration, passMark: currentSettings.passMark }
-            });
+        if (allConfigs.length > 0) {
+            allConfigs.forEach(c => trashPayload.push({
+                type: 'settings', originalId: c._id, data: { subject: c.subject, duration: c.duration, passMark: c.passMark }
+            }));
         }
 
         if (trashPayload.length > 0) await Trash.insertMany(trashPayload);
 
         await Question.deleteMany({});
         await Result.deleteMany({});
-        await Settings.deleteMany({}); // Wipes configuration profile context
+        await SubjectSettings.deleteMany({}); // Wipes dynamic configurations entirely
 
         res.json({ success: true, message: "System wiped! Complete history backed up to the Trash Bin." });
     } catch (error) {
@@ -290,7 +303,7 @@ app.post('/api/trash/restore/:id', async (req, res) => {
         } else if (item.type === 'result') {
             await Result.create(item.data);
         } else if (item.type === 'settings') {
-            await Settings.findOneAndUpdate({}, item.data, { upsert: true });
+            await SubjectSettings.findOneAndUpdate({ subject: item.data.subject }, item.data, { upsert: true });
         }
 
         await Trash.findByIdAndDelete(req.params.id);

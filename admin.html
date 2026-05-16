@@ -66,19 +66,87 @@
             </section>
 
             <section id="tab-settings" class="tab-content">
-                <h2>System Settings</h2>
+                <h2>Configure Subject Timers</h2>
                 <div class="settings-container" style="background:white; padding:20px; border-radius:10px; margin-top:20px;">
-                    <div class="form-group" style="margin-bottom:15px;">
-                        <label>Exam Title</label><br>
-                        <input type="text" id="set-title" style="width:100%; padding:10px;" placeholder="2026 Entrance Exam">
-                    </div>
-                    <div class="form-group" style="margin-bottom:15px;">
-                        <label>Duration (Minutes)</label><br>
-                        <input type="number" id="set-duration" style="width:100%; padding:10px;" value="120">
-                    </div>
-                    <button class="btn-nav btn-primary" onclick="saveSettings()">Save Configuration</button>
                     
-                    <hr style="margin:30px 0;">
+                    <div class="form-group" style="margin-bottom:15px;">
+                        <label style="font-weight:bold;">Target Subject & Class Profile:</label><br>
+                        <select id="set-subject-target" onchange="loadSelectedSubjectDuration()" style="width:100%; padding:10px; margin-top:5px; border-radius:5px; border:1px solid #ccc;">
+                            <optgroup label="JUNIOR SECONDARY 1">
+                                <option value="JSS1 Mathematics">JSS1 Mathematics</option>
+                                <option value="JSS1 English">JSS1 English</option>
+                                <option value="JSS1 Basic Science">JSS1 Basic Science</option>
+                                <option value="JSS1 Computer Studies">JSS1 Computer Studies</option>
+                                <option value="JSS1 Social Studies">JSS1 Social Studies</option>
+                                <option value="JSS1 PHE">JSS1 PHE</option>
+                            </optgroup>
+                            <optgroup label="JUNIOR SECONDARY 2">
+                                <option value="JSS2 Mathematics">JSS2 Mathematics</option>
+                                <option value="JSS2 English">JSS2 English</option>
+                                <option value="JSS2 Basic Science">JSS2 Basic Science</option>
+                                <option value="JSS2 Computer Studies">JSS2 Computer Studies</option>
+                                <option value="JSS2 Business Studies">JSS2 Business Studies</option>
+                                <option value="JSS2 Basic Tech">JSS2 Basic Tech</option>
+                            </optgroup>
+                            <optgroup label="JUNIOR SECONDARY 3">
+                                <option value="JSS3 Mathematics">JSS3 Mathematics</option>
+                                <option value="JSS3 English">JSS3 English</option>
+                                <option value="JSS3 Basic Science">JSS3 Basic Science</option>
+                                <option value="JSS3 Computer Studies">JSS3 Computer Studies</option>
+                                <option value="JSS3 Social Studies">JSS3 Social Studies</option>
+                                <option value="JSS3 CCA">JSS3 CCA</option>
+                            </optgroup>
+                            <optgroup label="SENIOR SECONDARY 1">
+                                <option value="SSS1 Mathematics">SSS1 Mathematics</option>
+                                <option value="SSS1 English">SSS1 English</option>
+                                <option value="SSS1 Biology">SSS1 Biology</option>
+                                <option value="SSS1 Physics">SSS1 Physics</option>
+                                <option value="SSS1 Chemistry">SSS1 Chemistry</option>
+                                <option value="SSS1 Computer/Data Processing">SSS1 Computer/Data Processing</option>
+                                <option value="SSS1 Economics">SSS1 Economics</option>
+                            </optgroup>
+                            <optgroup label="SENIOR SECONDARY 2">
+                                <option value="SSS2 Mathematics">SSS2 Mathematics</option>
+                                <option value="SSS2 English">SSS2 English</option>
+                                <option value="SSS2 Biology">SSS2 Biology</option>
+                                <option value="SSS2 Physics">SSS2 Physics</option>
+                                <option value="SSS2 Chemistry">SSS2 Chemistry</option>
+                                <option value="SSS2 Computer/Data Processing">SSS2 Computer/Data Processing</option>
+                                <option value="SSS2 Government">SSS2 Government</option>
+                            </optgroup>
+                            <optgroup label="SENIOR SECONDARY 3">
+                                <option value="SSS3 Mathematics">SSS3 Mathematics</option>
+                                <option value="SSS3 English">SSS3 English</option>
+                                <option value="SSS3 Biology">SSS3 Biology</option>
+                                <option value="SSS3 Physics">SSS3 Physics</option>
+                                <option value="SSS3 Chemistry">SSS3 Chemistry</option>
+                                <option value="SSS3 Computer/Data Processing">SSS3 Computer/Data Processing</option>
+                                <option value="SSS3 Civic Education">SSS3 Civic Education</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:20px;">
+                        <label style="font-weight:bold;">Duration (Minutes for this specific subject)</label><br>
+                        <input type="number" id="set-duration" style="width:100%; padding:10px; margin-top:5px; border-radius:5px; border:1px solid #ccc;" value="60">
+                    </div>
+                    
+                    <button class="btn-nav btn-primary" onclick="saveSettings()">Save Subject Configuration</button>
+                    
+                    <h3 style="margin-top:40px; font-size:1.1rem; color:#6a1b9a;">Active Allocated Timers Grid</h3>
+                    <table class="admin-table" style="margin-top:10px;">
+                        <thead>
+                            <tr>
+                                <th>Subject Profile Target</th>
+                                <th>Duration Limit Allowed</th>
+                            </tr>
+                        </thead>
+                        <tbody id="timing-grid-list">
+                            <tr><td colspan="2" style="text-align:center; color:#888;">No custom configurations parsed yet.</td></tr>
+                        </tbody>
+                    </table>
+
+                    <hr style="margin:40px 0;">
                     
                     <h3 style="color:red;">Danger Zone</h3>
                     <div style="display:flex; flex-wrap:wrap; gap:15px; margin-top:15px;">
@@ -120,7 +188,6 @@
             
             <label for="q-subject" style="display:block; margin-top:10px; font-weight:bold;">Subject & Class:</label>
             <select id="q-subject" style="width:100%; padding:10px; margin-bottom:15px; border-radius: 5px; border: 1px solid #ccc;">
-                
                 <optgroup label="JUNIOR SECONDARY 1">
                     <option value="JSS1 Mathematics">JSS1 Mathematics</option>
                     <option value="JSS1 English">JSS1 English</option>
@@ -129,7 +196,6 @@
                     <option value="JSS1 Social Studies">JSS1 Social Studies</option>
                     <option value="JSS1 PHE">JSS1 PHE</option>
                 </optgroup>
-
                 <optgroup label="JUNIOR SECONDARY 2">
                     <option value="JSS2 Mathematics">JSS2 Mathematics</option>
                     <option value="JSS2 English">JSS2 English</option>
@@ -138,7 +204,6 @@
                     <option value="JSS2 Business Studies">JSS2 Business Studies</option>
                     <option value="JSS2 Basic Tech">JSS2 Basic Tech</option>
                 </optgroup>
-
                 <optgroup label="JUNIOR SECONDARY 3">
                     <option value="JSS3 Mathematics">JSS3 Mathematics</option>
                     <option value="JSS3 English">JSS3 English</option>
@@ -147,7 +212,6 @@
                     <option value="JSS3 Social Studies">JSS3 Social Studies</option>
                     <option value="JSS3 CCA">JSS3 CCA</option>
                 </optgroup>
-
                 <optgroup label="SENIOR SECONDARY 1">
                     <option value="SSS1 Mathematics">SSS1 Mathematics</option>
                     <option value="SSS1 English">SSS1 English</option>
@@ -157,7 +221,6 @@
                     <option value="SSS1 Computer/Data Processing">SSS1 Computer/Data Processing</option>
                     <option value="SSS1 Economics">SSS1 Economics</option>
                 </optgroup>
-
                 <optgroup label="SENIOR SECONDARY 2">
                     <option value="SSS2 Mathematics">SSS2 Mathematics</option>
                     <option value="SSS2 English">SSS2 English</option>
@@ -167,7 +230,6 @@
                     <option value="SSS2 Computer/Data Processing">SSS2 Computer/Data Processing</option>
                     <option value="SSS2 Government">SSS2 Government</option>
                 </optgroup>
-
                 <optgroup label="SENIOR SECONDARY 3">
                     <option value="SSS3 Mathematics">SSS3 Mathematics</option>
                     <option value="SSS3 English">SSS3 English</option>
